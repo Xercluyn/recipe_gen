@@ -15,8 +15,8 @@ export default defineConfig({
         name: 'Recipe Gen — 節約レシピ',
         short_name: 'Recipe Gen',
         description: 'Free AI recipes from Japanese supermarket ingredients — cheap and quick.',
-        theme_color: '#e85d3a',
-        background_color: '#fffaf5',
+        theme_color: '#2f7d4a',
+        background_color: '#f4f7f2',
         display: 'standalone',
         start_url: '/recipe_gen/',
         scope: '/recipe_gen/',
@@ -27,7 +27,19 @@ export default defineConfig({
         ]
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,svg,png,json}']
+        globPatterns: ['**/*.{js,css,html,svg,png,json}'],
+        // Cache the rounded display font so the app looks right offline.
+        runtimeCaching: [
+          {
+            urlPattern: /^https:\/\/fonts\.(googleapis|gstatic)\.com\/.*/i,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'google-fonts',
+              expiration: { maxEntries: 40, maxAgeSeconds: 60 * 60 * 24 * 365 },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
+        ],
       }
     })
   ],

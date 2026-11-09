@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { useId, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { GeneratedRecipe } from '../types';
 import { INGREDIENT_MAP, getIngredientName } from '../data/ingredients';
@@ -8,6 +8,47 @@ import { formatAmount, yen } from './format';
 import { renderSteps, scaleRecipe } from '../lib/recipeText';
 import { Icon } from './ui';
 
+function Glyph({ d, size = 18, width = 2.4 }: { d: string; size?: number; width?: number }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={width}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d={d} />
+    </svg>
+  );
+}
+
+/** Star with yolk fill when pressed (colors come from CSS). */
+export function StarGlyph({ size = 22 }: { size?: number }) {
+  return (
+    <svg
+      className="star-glyph"
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      strokeWidth={1.8}
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z" />
+    </svg>
+  );
+}
+
+const MINUS = 'M6 12h12';
+const PLUS = 'M6 12h12M12 6v12';
+const INFO = 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18ZM12 11v5M12 7.5v.5';
+const BULB = 'M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3Z';
+
+/** Row of three bento stat tiles: time, servings (optional stepper), cost per serving. */
 export function RecipeMeta({
   recipe,
   onServings,
@@ -17,40 +58,57 @@ export function RecipeMeta({
   onServings?: (n: number) => void;
 }) {
   const { t } = useTranslation();
+  const servId = useId();
   return (
-    <div className="meta">
-      <span className="pill">
-        <Icon name="clock" size={16} />
-        {t('common.minutes', { n: recipe.totalMinutes })}
-      </span>
-      {onServings ? (
-        <span className="pill stepper" role="group" aria-label={t('detail.servingsAdjust')}>
-          <button
-            type="button"
-            aria-label={t('detail.fewer')}
-            disabled={recipe.servings <= 1}
-            onClick={() => onServings(recipe.servings - 1)}
-          >
-            −
-          </button>
-          <Icon name="user" size={16} />
-          {t('common.servings', { n: recipe.servings })}
-          <button
-            type="button"
-            aria-label={t('detail.more')}
-            disabled={recipe.servings >= 8}
-            onClick={() => onServings(recipe.servings + 1)}
-          >
-            +
-          </button>
+    <div className="bento-stats">
+      <div className="bento-stat">
+        <span className="bento-stat-label">
+          <Icon name="clock" size={14} />
+          {t('detail.time')}
         </span>
-      ) : (
-        <span className="pill">
-          <Icon name="user" size={16} />
-          {t('common.servings', { n: recipe.servings })}
+        <span className="bento-stat-value">{t('common.minutes', { n: recipe.totalMinutes })}</span>
+      </div>
+
+      <div className="bento-stat tint">
+        <span className="bento-stat-label" id={servId}>
+          {t('detail.servingsAdjust')}
         </span>
-      )}
-      <span className="pill accent">{t('common.perServing', { n: yen(costPerServing(recipe)) })}</span>
+        {onServings ? (
+          <div className="bento-stepper" role="group" aria-labelledby={servId}>
+            <button
+              type="button"
+              className="bento-step-btn"
+              aria-label={t('detail.fewer')}
+              disabled={recipe.servings <= 1}
+              onClick={() => onServings(recipe.servings - 1)}
+            >
+              <Glyph d={MINUS} />
+            </button>
+            <output className="bento-stat-value" aria-live="polite">
+              {recipe.servings}
+            </output>
+            <button
+              type="button"
+              className="bento-step-btn plus"
+              aria-label={t('detail.more')}
+              disabled={recipe.servings >= 8}
+              onClick={() => onServings(recipe.servings + 1)}
+            >
+              <Glyph d={PLUS} />
+            </button>
+          </div>
+        ) : (
+          <span className="bento-stat-value">{t('common.servings', { n: recipe.servings })}</span>
+        )}
+      </div>
+
+      <div className="bento-stat yolk">
+        <span className="bento-stat-label">{t('detail.perServing')}</span>
+        <span className="bento-stat-value">
+          <span className="bento-yen">¥</span>
+          {yen(costPerServing(recipe))}
+        </span>
+      </div>
     </div>
   );
 }
@@ -66,53 +124,91 @@ export function RecipeCard({
 }) {
   const { t } = useTranslation();
   const lang = currentLang();
+  const uid = useId();
   const [servings, setServings] = useState(recipe.servings);
   const shown = scaleRecipe(recipe, servings);
   const total = estimateCost(shown);
   const steps = renderSteps(shown, lang);
 
-  return (
-    <article className="card recipe">
-      {header}
-      <h2 className="recipe-title">{recipe.title}</h2>
-      {recipe.description && <p className="recipe-desc">{recipe.description}</p>}
-      <RecipeMeta recipe={shown} onServings={setServings} />
+  const rows = shown.ingredients.map((ri, i) => {
+    const pantry = !!INGREDIENT_MAP[ri.id]?.pantry;
+    return { ri, i, pantry, cost: pantry ? 0 : estimateCost({ ingredients: [ri] }) };
+  });
+  const buy = rows.filter((r) => !r.pantry);
+  const stock = rows.filter((r) => r.pantry);
 
-      <section className="recipe-section">
-        <div className="section-head">
-          <h3>{t('detail.ingredients')}</h3>
-          <span className="muted small">{t('common.total', { n: yen(total) })}</span>
-        </div>
-        <ul className="ing-list">
-          {shown.ingredients.map((ri, i) => {
-            const pantry = !!INGREDIENT_MAP[ri.id]?.pantry;
-            const c = pantry ? 0 : estimateCost({ ingredients: [ri] });
-            return (
-              <li key={`${ri.id}-${i}`} className="ing-row">
-                <span className="ing-name">{getIngredientName(ri.id, lang)}</span>
-                <span className="ing-amount">{formatAmount(ri, t)}</span>
-                <span className="ing-cost">{pantry ? <span className="tag">{t('detail.pantry')}</span> : `¥${yen(c)}`}</span>
-              </li>
-            );
-          })}
-        </ul>
-        <p className="muted tiny">{t('detail.costNote')}</p>
+  const renderRows = (list: typeof rows) =>
+    list.map(({ ri, i, pantry, cost }) => (
+      <li key={`${ri.id}-${i}`} className="bento-ing-row">
+        <span className="bento-ing-name">{getIngredientName(ri.id, lang)}</span>
+        <span className="bento-ing-amount">{formatAmount(ri, t)}</span>
+        <span className="bento-ing-cost">
+          {pantry ? <span className="bento-tag">{t('detail.pantry')}</span> : `¥${yen(cost)}`}
+        </span>
+      </li>
+    ));
+
+  return (
+    <article className="bento recipe">
+      <section className="bento-tile bento-title-tile">
+        {header}
+        <h2 className="recipe-title">{recipe.title}</h2>
+        {recipe.description && <p className="recipe-desc">{recipe.description}</p>}
       </section>
 
-      <section className="recipe-section">
-        <h3>{t('detail.steps')}</h3>
-        <ol className="steps">
+      <RecipeMeta recipe={shown} onServings={setServings} />
+
+      <section className="bento-tile" aria-labelledby={`${uid}-ing`}>
+        <div className="bento-head">
+          <h3 id={`${uid}-ing`} className="bento-h">
+            {t('detail.ingredients')}
+            <span className="bento-h-sub">{t('common.servings', { n: shown.servings })}</span>
+          </h3>
+          <span className="bento-badge">{t('common.total', { n: yen(total) })}</span>
+        </div>
+        {buy.length > 0 && (
+          <ul className="bento-ing buy" aria-label={t('detail.toBuy')}>
+            {renderRows(buy)}
+          </ul>
+        )}
+        {stock.length > 0 && (
+          <ul className="bento-ing stock" aria-label={t('detail.pantryList')}>
+            {renderRows(stock)}
+          </ul>
+        )}
+        <p className="bento-note">
+          <Glyph d={INFO} size={14} width={2.2} />
+          {t('detail.costNote')}
+        </p>
+      </section>
+
+      <section className="bento-tile" aria-labelledby={`${uid}-steps`}>
+        <div className="bento-head">
+          <h3 id={`${uid}-steps`} className="bento-h">
+            {t('detail.steps')}
+          </h3>
+          <span className="bento-head-meta">{t('detail.stepCount', { n: steps.length })}</span>
+        </div>
+        <ol className="bento-steps">
           {steps.map((parts, i) => (
             <li key={i}>
-              <span className="step-num">{i + 1}</span>
+              <span className="bento-step-num" aria-hidden="true">
+                {i + 1}
+              </span>
               <p>
                 {parts.map((p, j) =>
                   'text' in p ? (
                     <span key={j}>{p.text}</span>
                   ) : (
-                    <span key={j} className="step-ing">
-                      {p.name}
-                      {p.amount && <span className="step-amt">{lang === 'ja' ? `（${formatAmount(p.amount, t, lang)}）` : ` (${formatAmount(p.amount, t, lang)})`}</span>}
+                    <span key={j}>
+                      <span className="step-ing">{p.name}</span>
+                      {p.amount && (
+                        <span className="step-amt">
+                          {lang === 'ja'
+                            ? `（${formatAmount(p.amount, t, lang)}）`
+                            : ` (${formatAmount(p.amount, t, lang)})`}
+                        </span>
+                      )}
                     </span>
                   ),
                 )}
@@ -123,13 +219,18 @@ export function RecipeCard({
       </section>
 
       {recipe.tip && (
-        <aside className="tip">
-          <strong>{t('detail.tip')}</strong>
-          <p>{recipe.tip}</p>
+        <aside className="bento-tile bento-tip">
+          <span className="bento-tip-icon" aria-hidden="true">
+            <Glyph d={BULB} size={20} width={2} />
+          </span>
+          <div>
+            <p className="bento-tip-title">{t('detail.tip')}</p>
+            <p className="bento-tip-body">{recipe.tip}</p>
+          </div>
         </aside>
       )}
 
-      {actions && <div className="actions">{actions}</div>}
+      {actions && <div className="actions bento-actions">{actions}</div>}
     </article>
   );
 }

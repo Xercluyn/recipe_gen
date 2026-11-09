@@ -1,0 +1,68 @@
+/* ---------- tab bar: floating rounded bento bar ---------- */
+.tabbar {
+  position: fixed;
+  z-index: 10;
+  left: calc(env(safe-area-inset-left) + 12px);
+  right: calc(env(safe-area-inset-right) + 12px);
+  bottom: max(10px, env(safe-area-inset-bottom));
+  max-width: 480px;
+  margin: 0 auto;
+  height: var(--tabbar-h);
+  display: flex;
+  gap: 6px;
+  padding: 5px 8px;
+  background: color-mix(in srgb, var(--surface) 92%, transparent);
+  backdrop-filter: saturate(1.6) blur(16px);
+  -webkit-backdrop-filter: saturate(1.6) blur(16px);
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  box-shadow: var(--shadow);
+}
+.tab {
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 52px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  color: var(--muted);
+  text-decoration: none;
+  font-family: var(--font-display);
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 1.2;
+  border-radius: 18px;
+  -webkit-touch-callout: none;
+}
+.tab-ico {
+  width: 56px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border-radius: 15px;
+  transition: background-color 0.15s ease, transform 0.12s ease;
+}
+.tab.on {
+  color: var(--accent-strong);
+  font-weight: 800;
+}
+.tab.on .tab-ico {
+  background: var(--accent-soft);
+}
+.tab:active .tab-ico {
+  transform: scale(0.92);
+}
+.tab:focus-visible {
+  outline-offset: -2px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .tab-ico {
+    transition: none;
+  }
+}
+
+.icon {
+  flex: 0 0 auto;
+}

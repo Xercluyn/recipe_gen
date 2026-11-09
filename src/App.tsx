@@ -33,17 +33,23 @@ export default function App() {
         </Suspense>
       </main>
 
-      <nav className="tabbar" aria-label="Main">
+      <nav className="tabbar" aria-label={t('common.mainMenu')}>
         <NavLink to="/" end className={tab}>
-          <Icon name="pot" />
+          <span className="tab-ico">
+            <Icon name="pot" />
+          </span>
           <span>{t('tabs.generate')}</span>
         </NavLink>
         <NavLink to="/saved" className={({ isActive }) => tab({ isActive: isActive || pathname.startsWith('/recipe/') })}>
-          <Icon name="bookmark" />
+          <span className="tab-ico">
+            <Icon name="bookmark" />
+          </span>
           <span>{t('tabs.saved')}</span>
         </NavLink>
         <NavLink to="/settings" className={tab}>
-          <Icon name="gear" />
+          <span className="tab-ico">
+            <Icon name="sliders" />
+          </span>
           <span>{t('tabs.settings')}</span>
         </NavLink>
       </nav>

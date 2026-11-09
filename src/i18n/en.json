@@ -19,7 +19,8 @@
     "perServing": "¥{{n}}/serving",
     "total": "≈ ¥{{n}} total",
     "loading": "Loading…",
-    "error": "Something went wrong"
+    "error": "Something went wrong",
+    "mainMenu": "Main menu"
   },
   "units": {
     "g": "g",
@@ -68,7 +69,19 @@
     "viewSaved": "View saved recipe",
     "regenerate": "Try another",
     "thinking": "Thinking…",
-    "elapsed": "{{n}}s"
+    "elapsed": "{{n}}s",
+    "heading": "What's cooking today?",
+    "examplesLabel": "Examples",
+    "selectedCount": "{{n}} selected",
+    "timeHint": "or less",
+    "budgetShort": "Budget",
+    "perServing": "per serving",
+    "optional": "Optional",
+    "budgetMax": "max",
+    "servingsUnit_one": "serving",
+    "servingsUnit_other": "servings",
+    "fewer": "Fewer servings",
+    "more": "More servings"
   },
   "errors": {
     "offline": "You're offline. Connect to the internet to create recipes (saved recipes still work offline).",
@@ -87,7 +100,10 @@
     "all": "All",
     "empty": "No saved recipes yet.",
     "emptyCta": "Make a recipe",
-    "noMatch": "No recipes match."
+    "noMatch": "No recipes match.",
+    "count": "{{n}} saved",
+    "filter": "Filter",
+    "favoriteOf": "Favorite: {{title}}"
   },
   "detail": {
     "ingredients": "Ingredients",
@@ -103,7 +119,12 @@
     "copied": "Copied",
     "servingsAdjust": "Servings",
     "fewer": "Fewer servings",
-    "more": "More servings"
+    "more": "More servings",
+    "time": "Time",
+    "perServing": "Per serving",
+    "stepCount": "{{n}} steps",
+    "toBuy": "To buy",
+    "pantryList": "Pantry staples"
   },
   "settings": {
     "title": "Settings",

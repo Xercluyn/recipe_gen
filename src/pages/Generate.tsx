@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import type { GenerateRequest, GeneratedRecipe } from '../types';
@@ -8,10 +8,11 @@ import { CloudError, generateRecipe, isAbortError, type CloudErrorCode } from '.
 import { currentLang } from '../i18n';
 import { IngredientPicker } from '../components/IngredientPicker';
 import { RecipeCard } from '../components/RecipeCard';
-import { Icon, Segmented, Spinner } from '../components/ui';
+import { BentoHop, BentoLogo, Icon, Segmented, Stepper } from '../components/ui';
 
 const TIMES = [10, 15, 30, 60] as const;
-const SERVINGS = [1, 2, 3, 4] as const;
+const MIN_SERVINGS = 1;
+const MAX_SERVINGS = 4;
 
 interface Draft {
   prompt: string;
@@ -135,88 +136,141 @@ export default function Generate() {
     update({ savedId: id });
   };
 
+  const uid = useId();
+  const ids = {
+    prompt: `${uid}-prompt`,
+    fridge: `${uid}-fridge`,
+    time: `${uid}-time`,
+    people: `${uid}-people`,
+    budget: `${uid}-budget`,
+  };
   const ready = online;
   const generating = status === 'generating';
 
   return (
     <div className="page">
       <header className="page-head">
-        <h1>{t('generate.title')}</h1>
-        <p className="muted small">{t('app.tagline')}</p>
+        <div>
+          <h1>{t('generate.heading')}</h1>
+          <p className="muted small">{t('app.tagline')}</p>
+        </div>
+        <BentoLogo />
       </header>
 
       {!online && (
         <div className="card offline-banner" role="status">
-          {t('errors.offline')}
+          <Icon name="wifiOff" size={20} />
+          <span>{t('errors.offline')}</span>
         </div>
       )}
 
       <form
-        className="card form"
+        className="bento-stack"
+        aria-label={t('generate.title')}
         onSubmit={(e) => {
           e.preventDefault();
           if (ready && !generating) void run();
         }}
       >
-        <label className="field">
-          <span className="field-label">{t('generate.promptLabel')}</span>
+        <section className="tile">
+          <label htmlFor={ids.prompt} className="tile-title">
+            <Icon name="sparkle" size={18} />
+            {t('generate.promptLabel')}
+          </label>
           <textarea
+            id={ids.prompt}
             rows={2}
             value={d.prompt}
             maxLength={300}
             placeholder={t('generate.promptPlaceholder')}
             onChange={(e) => update({ prompt: e.target.value })}
           />
-        </label>
-        <div className="chips scroll-x">
-          {examples.map((ex) => (
-            <button
-              key={ex}
-              type="button"
-              className={d.prompt === ex ? 'chip on' : 'chip'}
-              onClick={() => update({ prompt: ex })}
-            >
-              {ex}
-            </button>
-          ))}
-        </div>
+          <div className="chips scroll-x" role="group" aria-label={t('generate.examplesLabel')}>
+            {examples.map((ex) => (
+              <button
+                key={ex}
+                type="button"
+                className={d.prompt === ex ? 'chip yolk on' : 'chip yolk'}
+                aria-pressed={d.prompt === ex}
+                onClick={() => update({ prompt: ex })}
+              >
+                {ex}
+              </button>
+            ))}
+          </div>
+        </section>
 
-        <div className="field">
-          <span className="field-label">{t('generate.fridgeLabel')}</span>
+        <section className="tile green" aria-labelledby={ids.fridge}>
+          <div className="tile-head">
+            <h2 id={ids.fridge} className="tile-title">
+              <Icon name="fridge" size={18} />
+              {t('generate.fridgeLabel')}
+            </h2>
+            {d.fridge.length > 0 && (
+              <span className="badge">{t('generate.selectedCount', { n: d.fridge.length })}</span>
+            )}
+          </div>
           <IngredientPicker value={d.fridge} onChange={(fridge) => update({ fridge })} />
-        </div>
+        </section>
 
-        <div className="field">
-          <span className="field-label">{t('generate.maxTime')}</span>
-          <Segmented
-            label={t('generate.maxTime')}
-            value={d.maxMinutes}
-            options={TIMES.map((m) => ({ value: m, label: t('common.minutes', { n: m }) }))}
-            onChange={(maxMinutes) => {
-              update({ maxMinutes });
-              saveSettings({ maxMinutes });
-            }}
-          />
-        </div>
-
-        <div className="row-2">
-          <div className="field">
-            <span className="field-label">{t('generate.servings')}</span>
+        <div className="bento-grid">
+          <section className="tile span-2" aria-labelledby={ids.time}>
+            <div className="tile-head">
+              <h2 id={ids.time} className="tile-title">
+                <Icon name="timer" size={18} />
+                {t('generate.maxTime')}
+              </h2>
+              <span className="tile-meta">{t('generate.timeHint')}</span>
+            </div>
             <Segmented
-              label={t('generate.servings')}
+              label={t('generate.maxTime')}
+              value={d.maxMinutes}
+              options={TIMES.map((m) => ({ value: m, label: t('common.minutes', { n: m }) }))}
+              onChange={(maxMinutes) => {
+                update({ maxMinutes });
+                saveSettings({ maxMinutes });
+              }}
+            />
+          </section>
+
+          <section className="tile yolk compact" aria-labelledby={ids.people}>
+            <h2 id={ids.people} className="tile-title">
+              <Icon name="users" size={18} />
+              {t('generate.servings')}
+            </h2>
+            <Stepper
+              labelledBy={ids.people}
               value={d.servings}
-              options={SERVINGS.map((s) => ({ value: s, label: String(s) }))}
+              min={MIN_SERVINGS}
+              max={MAX_SERVINGS}
+              decLabel={t('generate.fewer')}
+              incLabel={t('generate.more')}
               onChange={(servings) => {
                 update({ servings });
                 saveSettings({ servings });
               }}
-            />
-          </div>
-          <label className="field">
-            <span className="field-label">{t('generate.budget')}</span>
-            <div className="input-prefix">
-              <span>¥</span>
+            >
+              <span className="num">{d.servings}</span>
+              <span className="unit">{t('generate.servingsUnit', { count: d.servings })}</span>
+            </Stepper>
+          </section>
+
+          <section className="tile compact">
+            <div className="tile-head">
+              <label htmlFor={ids.budget} className="tile-title">
+                <span>
+                  {t('generate.budgetShort')}
+                  <span className="sub">{t('generate.perServing')}</span>
+                </span>
+              </label>
+              <span className="badge outline">{t('generate.optional')}</span>
+            </div>
+            <div className="amount">
+              <span className="amount-unit" aria-hidden="true">
+                ¥
+              </span>
               <input
+                id={ids.budget}
                 type="number"
                 inputMode="numeric"
                 min={0}
@@ -225,16 +279,17 @@ export default function Generate() {
                 placeholder={t('generate.budgetPlaceholder')}
                 onChange={(e) => update({ budget: e.target.value })}
               />
+              {d.budget !== '' && <span className="amount-suffix">{t('generate.budgetMax')}</span>}
             </div>
-          </label>
+          </section>
         </div>
 
         {generating ? (
           <div className="streaming" aria-live="polite">
             <div className="streaming-head">
-              <Spinner />
+              <BentoHop />
               <span className="streaming-title">{t('generate.thinking')}</span>
-              <span className="muted small">{t('generate.elapsed', { n: elapsed })}</span>
+              <span className="streaming-time">{t('generate.elapsed', { n: elapsed })}</span>
             </div>
             <button type="button" className="btn ghost block" onClick={cancel}>
               {t('common.cancel')}
@@ -242,13 +297,14 @@ export default function Generate() {
           </div>
         ) : (
           <button type="submit" className="btn primary block lg" disabled={!ready}>
-            <Icon name="sparkle" size={20} />
+            <Icon name="sparkle" size={22} />
             {t('generate.generateBtn')}
           </button>
         )}
         {status === 'error' && (
-          <p className="error" role="alert">
-            {t(`errors.${errCode}`)}
+          <p className="alert" role="alert">
+            <Icon name="alert" size={18} />
+            <span>{t(`errors.${errCode}`)}</span>
           </p>
         )}
       </form>
@@ -262,7 +318,8 @@ export default function Generate() {
               <>
                 {d.savedId != null ? (
                   <Link className="btn primary" to={`/recipe/${d.savedId}`}>
-                    ✓ {t('generate.viewSaved')}
+                    <Icon name="check" size={18} stroke={2.5} />
+                    {t('generate.viewSaved')}
                   </Link>
                 ) : (
                   <button type="button" className="btn primary" onClick={() => void save()}>

@@ -6,7 +6,7 @@ import type { SavedRecipe } from '../types';
 import { db, deleteRecipe, toggleFavorite } from '../db/db';
 import { getIngredientName } from '../data/ingredients';
 import { currentLang } from '../i18n';
-import { RecipeCard } from '../components/RecipeCard';
+import { RecipeCard, StarGlyph } from '../components/RecipeCard';
 import { formatAmount } from '../components/format';
 import { renderStepsText } from '../lib/recipeText';
 import { ConfirmButton, Icon, Spinner } from '../components/ui';
@@ -41,8 +41,13 @@ export default function RecipeDetail() {
   );
 
   const back = (
-    <button type="button" className="btn link back" onClick={() => (history.length > 1 ? nav(-1) : nav('/saved'))}>
-      <Icon name="back" size={18} /> {t('common.back')}
+    <button
+      type="button"
+      className="recipe-icon-btn"
+      aria-label={t('common.back')}
+      onClick={() => (history.length > 1 ? nav(-1) : nav('/saved'))}
+    >
+      <Icon name="back" size={20} />
     </button>
   );
 
@@ -56,8 +61,8 @@ export default function RecipeDetail() {
   if (recipe === null) {
     return (
       <div className="page">
-        {back}
-        <p className="muted center pad">{t('detail.notFound')}</p>
+        <div className="recipe-topbar">{back}</div>
+        <p className="bento-tile muted center">{t('detail.notFound')}</p>
         <p className="center">
           <Link to="/saved" className="btn ghost">
             {t('saved.title')}
@@ -84,39 +89,56 @@ export default function RecipeDetail() {
 
   return (
     <div className="page">
-      {back}
+      <div className="recipe-topbar">
+        {back}
+        <div className="recipe-topbar-end">
+          <span className="recipe-status" role="status">
+            {copied ? t('detail.copied') : ''}
+          </span>
+          <button
+            type="button"
+            className={recipe.favorite ? 'recipe-icon-btn fav on' : 'recipe-icon-btn fav'}
+            aria-pressed={recipe.favorite}
+            aria-label={recipe.favorite ? t('detail.unfavorite') : t('detail.favorite')}
+            onClick={() => recipe.id != null && void toggleFavorite(recipe.id)}
+          >
+            <StarGlyph />
+          </button>
+          <button
+            type="button"
+            className="recipe-icon-btn"
+            aria-label={copied ? t('detail.copied') : t('detail.share')}
+            onClick={() => void share()}
+          >
+            <Icon name="share" size={20} />
+          </button>
+          <ConfirmButton
+            className="recipe-icon-btn danger"
+            onConfirm={async () => {
+              if (recipe.id != null) await deleteRecipe(recipe.id);
+              nav('/saved', { replace: true });
+            }}
+          >
+            <svg
+              width={20}
+              height={20}
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={1.9}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3" />
+            </svg>
+            <span className="bento-sr">{t('common.delete')}</span>
+          </ConfirmButton>
+        </div>
+      </div>
       <RecipeCard
         recipe={recipe}
-        header={
-          <div className="detail-top">
-            {recipe.prompt && <p className="muted small prompt">{t('detail.prompt', { p: recipe.prompt })}</p>}
-            <button
-              type="button"
-              className={recipe.favorite ? 'fav-btn on' : 'fav-btn'}
-              aria-pressed={recipe.favorite}
-              aria-label={recipe.favorite ? t('detail.unfavorite') : t('detail.favorite')}
-              onClick={() => recipe.id != null && void toggleFavorite(recipe.id)}
-            >
-              <Icon name="star" filled={recipe.favorite} />
-            </button>
-          </div>
-        }
-        actions={
-          <>
-            <button type="button" className="btn ghost" onClick={() => void share()}>
-              <Icon name="share" size={18} />
-              {copied ? t('detail.copied') : t('detail.share')}
-            </button>
-            <ConfirmButton
-              onConfirm={async () => {
-                if (recipe.id != null) await deleteRecipe(recipe.id);
-                nav('/saved', { replace: true });
-              }}
-            >
-              {t('common.delete')}
-            </ConfirmButton>
-          </>
-        }
+        header={recipe.prompt ? <p className="recipe-prompt">{t('detail.prompt', { p: recipe.prompt })}</p> : undefined}
       />
     </div>
   );

@@ -1,0 +1,421 @@
+/* Recipe Gen — mobile-first, warm food palette */
+:root {
+  /* Bento Pop: negi green + egg-yolk, rounded bento compartments */
+  --accent: #2f7d4a; /* white text on it: 5.0:1 */
+  --accent-strong: #21603a;
+  --accent-press: #1c5232; /* "pop" button bottom edge */
+  --accent-soft: #e3f1e3;
+  --on-accent: #ffffff;
+  --yolk: #f6c343;
+  --yolk-soft: #fff4d1;
+  --on-yolk: #3b2c00;
+  --highlight: #ffebaa; /* ingredient names inside steps */
+  --on-highlight: #3b2c00;
+  --bg: #f4f7f2;
+  --surface: #ffffff;
+  --surface-2: #e8f3e4; /* tinted compartment */
+  --text: #1f2a22;
+  --muted: #5b6b5f;
+  --border: #dce5d8;
+  --success: #2f7d4a;
+  --danger: #b3261e;
+  --danger-soft: #fbe3e0;
+  --warn-soft: #fff4d1;
+  --shadow: 0 1px 2px rgba(20, 60, 35, 0.06), 0 6px 18px rgba(20, 60, 35, 0.07);
+  --radius: 22px;
+  --radius-md: 18px;
+  --radius-sm: 12px;
+  --radius-pill: 999px;
+  --tabbar-h: 64px;
+  --font: -apple-system, BlinkMacSystemFont, 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Noto Sans JP',
+    'Yu Gothic UI', 'Meiryo', system-ui, 'Segoe UI', Roboto, sans-serif;
+  --font-display: 'M PLUS Rounded 1c', 'Hiragino Maru Gothic ProN', var(--font);
+  color-scheme: light dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --accent: #5dbb7e;
+    --accent-strong: #7bd098;
+    --accent-press: #2f7d4a;
+    --accent-soft: #1f3a2a;
+    --on-accent: #0e2416;
+    --yolk: #f6c343;
+    --yolk-soft: #3a3216;
+    --on-yolk: #2a1f00;
+    --highlight: #4a3f12;
+    --on-highlight: #fff1c2;
+    --bg: #121814;
+    --surface: #1b241e;
+    --surface-2: #22302a;
+    --text: #e9f1ea;
+    --muted: #a3b5a7;
+    --border: #2c3a31;
+    --success: #5dbb7e;
+    --danger: #ff8a80;
+    --danger-soft: #4a2220;
+    --warn-soft: #3a3216;
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.35), 0 6px 18px rgba(0, 0, 0, 0.3);
+  }
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 16px;
+  line-height: 1.6;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+}
+
+#root {
+  min-height: 100dvh;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-family: var(--font-display);
+  font-weight: 800;
+  line-height: 1.3;
+  margin: 0 0 0.5em;
+  color: var(--text);
+}
+h1 {
+  font-size: 1.625rem;
+  letter-spacing: 0.01em;
+}
+h2 {
+  font-size: 1.1rem;
+}
+h3 {
+  font-size: 1rem;
+}
+h4 {
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+p {
+  margin: 0 0 0.75em;
+}
+a {
+  color: var(--accent-strong);
+}
+
+/* Numbers (minutes, yen, servings) use the rounded display face. */
+.num {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* ---------- layout ---------- */
+.app {
+  min-height: 100dvh;
+}
+.main {
+  padding: calc(env(safe-area-inset-top) + 12px) calc(env(safe-area-inset-right) + 16px)
+    calc(var(--tabbar-h) + env(safe-area-inset-bottom) + 36px) calc(env(safe-area-inset-left) + 16px);
+  max-width: 640px;
+  margin: 0 auto;
+}
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+.page-head {
+  padding: 8px 2px 4px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.page-head > div {
+  min-width: 0;
+}
+.page-head h1 {
+  margin-bottom: 0;
+}
+.page-head p {
+  margin: 0;
+}
+
+/* Decorative 2x2 bento logo in page headers */
+.bento-logo {
+  flex: 0 0 auto;
+  width: 36px;
+  height: 36px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  gap: 3px;
+}
+.bento-logo > span {
+  border-radius: 4px;
+}
+.bento-logo > span:nth-child(1) {
+  background: var(--accent);
+  border-top-left-radius: 8px;
+}
+.bento-logo > span:nth-child(2) {
+  background: var(--yolk);
+  border-top-right-radius: 8px;
+}
+.bento-logo > span:nth-child(3) {
+  background: var(--accent-soft);
+  border-bottom-left-radius: 8px;
+}
+.bento-logo > span:nth-child(4) {
+  background: var(--highlight);
+  border-bottom-right-radius: 8px;
+}
+
+/* ---------- bento compartments ---------- */
+.card,
+.tile {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px;
+  min-width: 0;
+}
+.card > :last-child,
+.tile > :last-child {
+  margin-bottom: 0;
+}
+.tile {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.tile.green {
+  background: var(--surface-2);
+  border-color: transparent;
+}
+.tile.yolk {
+  background: var(--yolk-soft);
+  border-color: transparent;
+}
+.tile.compact {
+  padding: 12px 10px;
+}
+.tile-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  min-height: 22px;
+  padding-left: 2px;
+}
+.tile-title {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-display);
+  font-size: 0.9rem;
+  line-height: 1.4;
+  font-weight: 800;
+  color: var(--text);
+}
+.tile-title .icon {
+  color: var(--accent);
+}
+.tile.green .tile-title .icon {
+  color: var(--accent-strong);
+}
+.tile.yolk .tile-title .icon {
+  color: var(--text);
+}
+.tile-title .sub {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--muted);
+}
+.tile-meta {
+  font-size: 0.75rem;
+  line-height: 1.6;
+  color: var(--muted);
+}
+.badge {
+  display: inline-flex;
+  align-items: center;
+  font-family: var(--font-display);
+  font-size: 0.75rem;
+  line-height: 20px;
+  font-weight: 800;
+  padding: 0 8px;
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  color: var(--accent-strong);
+  white-space: nowrap;
+}
+.badge.outline {
+  background: transparent;
+  color: var(--muted);
+  border: 1px solid var(--border);
+  font-size: 0.7rem;
+  line-height: 18px;
+  padding: 0 7px;
+}
+.bento-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  min-width: 0;
+}
+.bento-grid > .span-2 {
+  grid-column: 1 / -1;
+}
+.bento-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+
+.notice {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.notice.warn {
+  background: var(--warn-soft);
+  border-color: transparent;
+}
+
+.muted {
+  color: var(--muted);
+}
+.small {
+  font-size: 0.875rem;
+}
+.tiny {
+  font-size: 0.75rem;
+}
+.block {
+  display: block;
+}
+.center {
+  text-align: center;
+}
+.pad {
+  padding: 32px 0;
+}
+.accent-text {
+  color: var(--accent-strong);
+  font-weight: 700;
+}
+.error {
+  color: var(--danger);
+  font-size: 0.9rem;
+  margin: 8px 0 0;
+}
+.alert {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  background: var(--danger-soft);
+  color: var(--danger);
+  font-weight: 700;
+  line-height: 1.5;
+}
+.alert .icon {
+  margin-top: 1px;
+}
+.offline-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  color: var(--danger);
+  background: var(--danger-soft);
+  border-color: transparent;
+  font-size: 0.9rem;
+  font-weight: 700;
+  line-height: 1.5;
+}
+.success {
+  color: var(--accent-strong);
+  font-size: 0.9rem;
+  font-weight: 700;
+  margin: 8px 0 0;
+}
+.hint {
+  font-size: 0.85rem;
+  background: var(--surface-2);
+  border-radius: var(--radius-sm);
+  padding: 8px 12px;
+}
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* numbered steps list (settings) */
+.num-steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  counter-reset: numstep;
+}
+.num-steps li {
+  counter-increment: numstep;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+.num-steps li::before {
+  content: counter(numstep);
+  flex: 0 0 auto;
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  border-radius: 9px;
+  background: var(--yolk);
+  color: var(--on-yolk);
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 0.85rem;
+  line-height: 1;
+}

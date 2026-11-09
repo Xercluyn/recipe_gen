@@ -6,7 +6,8 @@ import { db, toggleFavorite } from '../db/db';
 import { INGREDIENT_MAP } from '../data/ingredients';
 import { costPerServing } from '../lib/cost';
 import { yen } from '../components/format';
-import { Icon, Segmented, Spinner } from '../components/ui';
+import { Icon, Spinner } from '../components/ui';
+import { StarGlyph } from '../components/RecipeCard';
 
 export default function Saved() {
   const { t } = useTranslation();
@@ -28,15 +29,19 @@ export default function Saved() {
     });
   }, [recipes, q, filter]);
 
+  const favCount = recipes ? recipes.filter((r) => r.favorite).length : 0;
+  const wideFirst = shown.length % 2 === 1;
+
   return (
     <div className="page">
-      <header className="page-head">
+      <header className="page-head saved-head">
         <h1>{t('saved.title')}</h1>
+        {recipes && recipes.length > 0 && <span className="bento-badge">{t('saved.count', { n: recipes.length })}</span>}
       </header>
 
       {recipes && recipes.length > 0 && (
-        <div className="toolbar">
-          <label className="search">
+        <div className="saved-toolbar">
+          <label className="search saved-search">
             <Icon name="search" size={18} />
             <input
               type="search"
@@ -46,15 +51,27 @@ export default function Saved() {
               aria-label={t('saved.search')}
             />
           </label>
-          <Segmented
-            label={t('saved.favoritesOnly')}
-            value={filter}
-            onChange={setFilter}
-            options={[
-              { value: 'all', label: t('saved.all') },
-              { value: 'fav', label: <>★ {t('saved.favoritesOnly')}</> },
-            ]}
-          />
+          <div className="saved-filters" role="group" aria-label={t('saved.filter')}>
+            <button
+              type="button"
+              className="saved-filter"
+              aria-pressed={filter === 'all'}
+              onClick={() => setFilter('all')}
+            >
+              {t('saved.all')}
+              <span className="saved-filter-n">{recipes.length}</span>
+            </button>
+            <button
+              type="button"
+              className="saved-filter fav"
+              aria-pressed={filter === 'fav'}
+              onClick={() => setFilter('fav')}
+            >
+              <StarGlyph size={16} />
+              {t('saved.favoritesOnly')}
+              <span className="saved-filter-n">{favCount}</span>
+            </button>
+          </div>
         </div>
       )}
 
@@ -63,37 +80,56 @@ export default function Saved() {
           <Spinner />
         </div>
       ) : recipes.length === 0 ? (
-        <div className="empty">
-          <Icon name="bookmark" size={40} />
+        <div className="bento-tile saved-empty">
+          <span className="saved-empty-icon" aria-hidden="true">
+            <Icon name="bookmark" size={32} />
+          </span>
           <p>{t('saved.empty')}</p>
           <Link to="/" className="btn primary">
             {t('saved.emptyCta')}
           </Link>
         </div>
       ) : shown.length === 0 ? (
-        <p className="muted center pad">{t('saved.noMatch')}</p>
+        <div className="bento-tile saved-empty">
+          <span className="saved-empty-icon" aria-hidden="true">
+            <Icon name="search" size={28} />
+          </span>
+          <p>{t('saved.noMatch')}</p>
+        </div>
       ) : (
-        <ul className="saved-list">
-          {shown.map((r) => (
-            <li key={r.id} className="saved-item">
+        <ul className="saved-grid" aria-label={t('saved.title')}>
+          {shown.map((r, i) => (
+            <li
+              key={r.id}
+              className={`saved-card${wideFirst && i === 0 ? ' wide' : ''}${i % 2 === 1 ? ' alt' : ''}`}
+            >
               <Link to={`/recipe/${r.id}`} className="saved-link">
-                <span className="saved-title">{r.title}</span>
-                <span className="saved-meta">
-                  <span>
-                    <Icon name="clock" size={14} /> {t('common.minutes', { n: r.totalMinutes })}
+                <span className="saved-thumb" aria-hidden="true">
+                  <Icon name="pot" size={26} />
+                </span>
+                <span className="saved-body">
+                  <span className="saved-title">{r.title}</span>
+                  <span className="saved-meta">
+                    <span className="saved-time">
+                      <Icon name="clock" size={13} />
+                      {t('common.minutes', { n: r.totalMinutes })}
+                    </span>
+                    <span className="saved-cost">
+                      {t('detail.perServing')} <b>¥{yen(costPerServing(r))}</b>
+                    </span>
                   </span>
-                  <span className="accent-text">{t('common.perServing', { n: yen(costPerServing(r)) })}</span>
-                  <span>{new Date(r.createdAt).toLocaleDateString(r.lang === 'ja' ? 'ja-JP' : 'en-US')}</span>
                 </span>
               </Link>
               <button
                 type="button"
-                className={r.favorite ? 'fav-btn on' : 'fav-btn'}
+                className={r.favorite ? 'saved-star on' : 'saved-star'}
                 aria-pressed={r.favorite}
-                aria-label={r.favorite ? t('detail.unfavorite') : t('detail.favorite')}
+                aria-label={
+                  t('saved.favoriteOf', { title: r.title })
+                }
                 onClick={() => r.id != null && void toggleFavorite(r.id)}
               >
-                <Icon name="star" filled={r.favorite} />
+                <StarGlyph />
               </button>
             </li>
           ))}
