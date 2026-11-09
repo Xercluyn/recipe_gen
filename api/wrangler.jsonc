@@ -1,0 +1,19 @@
+{
+  "$schema": "../node_modules/wrangler/config-schema.json",
+  "name": "recipe-gen-api",
+  "main": "src/index.ts",
+  // Keep <= the bundled workerd release date (wrangler 4.158 ships workerd 1.20261104).
+  "compatibility_date": "2026-11-01",
+  "workers_dev": true,
+  // Workers AI — free daily allocation (10,000 neurons/day). No paid plan needed.
+  "ai": { "binding": "AI" },
+  // Per-IP soft limit: 10 requests / 60 s per Cloudflare location (approximate by design).
+  "ratelimits": [
+    {
+      "name": "RATE_LIMITER",
+      "namespace_id": "1001",
+      "simple": { "limit": 10, "period": 60 }
+    }
+  ],
+  "observability": { "enabled": true }
+}

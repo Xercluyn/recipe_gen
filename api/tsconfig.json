@@ -1,0 +1,25 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "isolatedModules": true,
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "types": ["@cloudflare/workers-types"]
+  },
+  "include": [
+    "src",
+    "../src/types.ts",
+    "../src/llm/core.ts",
+    "../src/llm/schema.ts",
+    "../src/llm/prompts.ts",
+    "../src/lib/validate.ts",
+    "../src/data/ingredients.ts"
+  ]
+}

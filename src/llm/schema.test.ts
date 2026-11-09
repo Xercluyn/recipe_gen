@@ -22,12 +22,9 @@ vi.mock('../data/ingredients', () => {
     getIngredientName: (id: string) => id,
   };
 });
-vi.mock('./engine', () => ({ getEngine: () => null }));
-vi.mock('../lib/validate', () => ({ validateRecipe: vi.fn(), sanitizeRecipe: vi.fn() }));
 
 const { buildSchema, selectAllowedIds } = await import('./schema');
 const { buildSystemPrompt, buildUserPrompt, formatIngredientList } = await import('./prompts');
-const { extractJson } = await import('./generate');
 
 const req = (over: Partial<GenerateRequest> = {}): GenerateRequest => ({
   prompt: '',
@@ -94,7 +91,7 @@ describe('prompts', () => {
     expect(formatIngredientList(['egg'], [], 'en')).toContain('egg: 卵 (Egg)');
   });
 
-  it('user prompt includes constraints, budget, errors and /no_think', () => {
+  it('user prompt includes constraints, budget, errors and /no_think by default', () => {
     const r = req({ prompt: '和風', budgetPerServingYen: 200, fridge: ['egg'] });
     const p = buildUserPrompt(r, ['egg', 'salt'], ['bad id']);
     expect(p).toContain('15分以内');
@@ -108,10 +105,17 @@ describe('prompts', () => {
     expect(e).not.toContain('previous output');
     expect(e.endsWith('/no_think')).toBe(true);
   });
+
+  it('user prompt omits /no_think when noThink is false', () => {
+    const p = buildUserPrompt(req(), ['egg'], undefined, { noThink: false });
+    expect(p).not.toContain('/no_think');
+    expect(buildUserPrompt(req(), ['egg'], undefined, { noThink: true }).endsWith('/no_think')).toBe(true);
+  });
 });
 
 describe('extractJson', () => {
-  it('strips think blocks and surrounding text', () => {
+  it('strips think blocks and surrounding text', async () => {
+    const { extractJson } = await import('./core');
     expect(extractJson('<think>\n\n</think>\n\n{"a":1}')).toBe('{"a":1}');
     expect(extractJson('Here: {"a":{"b":2}} done')).toBe('{"a":{"b":2}}');
   });

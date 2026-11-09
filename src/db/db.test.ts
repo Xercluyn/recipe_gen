@@ -1,6 +1,17 @@
 import 'fake-indexeddb/auto';
-import { beforeEach, describe, expect, it } from 'vitest';
-import { db, deleteRecipe, exportAll, importAll, saveRecipe, toggleFavorite, type NewRecipe } from './db';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import {
+  db,
+  DEFAULT_SETTINGS,
+  deleteRecipe,
+  exportAll,
+  importAll,
+  loadSettings,
+  saveRecipe,
+  saveSettings,
+  toggleFavorite,
+  type NewRecipe,
+} from './db';
 
 const sample = (over: Partial<NewRecipe> = {}): NewRecipe => ({
   title: 'もやし炒め',
@@ -66,5 +77,35 @@ describe('recipes db', () => {
   it('rejects invalid backup', async () => {
     await expect(importAll('{"nope":true}')).rejects.toThrow();
     await expect(importAll('not json')).rejects.toThrow();
+  });
+});
+
+describe('settings', () => {
+  let store: Record<string, string>;
+  beforeEach(() => {
+    store = {};
+    vi.stubGlobal('localStorage', {
+      getItem: (k: string) => (k in store ? store[k] : null),
+      setItem: (k: string, v: string) => {
+        store[k] = v;
+      },
+      removeItem: (k: string) => {
+        delete store[k];
+      },
+    });
+  });
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('returns defaults when nothing is stored', () => {
+    expect(loadSettings()).toEqual(DEFAULT_SETTINGS);
+  });
+
+  it('tolerates and drops the legacy modelKey field', () => {
+    store['recipe-gen:settings'] = JSON.stringify({ lang: 'en', modelKey: 'light', maxMinutes: 30, servings: 3 });
+    const s = loadSettings();
+    expect(s).toEqual({ lang: 'en', maxMinutes: 30, servings: 3 });
+    expect(s).not.toHaveProperty('modelKey');
+    saveSettings({ servings: 1 });
+    expect(JSON.parse(store['recipe-gen:settings'])).toEqual({ lang: 'en', maxMinutes: 30, servings: 1 });
   });
 });

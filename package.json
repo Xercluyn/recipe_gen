@@ -8,10 +8,12 @@
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "test": "vitest run",
-    "typecheck": "tsc -b --noEmit"
+    "typecheck": "tsc -b --noEmit",
+    "api:dev": "wrangler dev -c api/wrangler.jsonc",
+    "api:deploy": "wrangler deploy -c api/wrangler.jsonc",
+    "api:typecheck": "tsc --noEmit -p api"
   },
   "dependencies": {
-    "@mlc-ai/web-llm": "^0.2.87",
     "dexie": "^4.4.7",
     "dexie-react-hooks": "^4.4.0",
     "i18next": "^27.0.1",
@@ -21,15 +23,16 @@
     "react-router-dom": "^7.18.5"
   },
   "devDependencies": {
+    "@cloudflare/workers-types": "^5.20261109.1",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^6.2.1",
-    "@webgpu/types": "^0.1.74",
     "fake-indexeddb": "^6.2.8",
     "typescript": "^7.0.2",
     "vite": "^8.3.6",
     "vite-plugin-pwa": "^2.0.0",
-    "vitest": "^5.1.0"
+    "vitest": "^5.1.0",
+    "wrangler": "^4.158.0"
   },
   "overrides": {
     "rollup": "npm:@rollup/wasm-node@4.68.0"

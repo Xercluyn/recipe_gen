@@ -1,12 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { Lang, ModelKey } from '../types';
+import type { Lang } from '../types';
 import { exportAll, importAll, loadSettings, saveSettings } from '../db/db';
-import { MODELS } from '../llm/models';
 import { currentLang, setLanguage } from '../i18n';
-import { removeModel, startLoad, useModelState } from '../hooks/useModel';
 import { formatBytes } from '../components/format';
-import { ConfirmButton, ProgressBar, Segmented } from '../components/ui';
+import { ProgressBar, Segmented } from '../components/ui';
 
 interface StorageInfo {
   usage: number;
@@ -17,7 +15,6 @@ interface StorageInfo {
 export default function Settings() {
   const { t } = useTranslation();
   const lang = currentLang();
-  const m = useModelState();
   const [settings, setSettings] = useState(loadSettings);
   const [storage, setStorage] = useState<StorageInfo | null | undefined>(undefined);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
@@ -35,7 +32,7 @@ export default function Settings() {
   };
   useEffect(() => {
     void refreshStorage();
-  }, [m.cached]);
+  }, []);
 
   const update = (patch: Parameters<typeof saveSettings>[0]) => setSettings(saveSettings(patch));
 
@@ -89,59 +86,9 @@ export default function Settings() {
       </section>
 
       <section className="card">
-        <h2>{t('settings.model')}</h2>
-        <p className="muted small">{t('settings.modelHint')}</p>
-        {m.webgpu === false && <p className="error">{t('model.noWebGPU')}</p>}
-        <ul className="model-list">
-          {(Object.keys(MODELS) as ModelKey[]).map((k) => {
-            const selected = settings.modelKey === k;
-            return (
-              <li key={k} className={selected ? 'model-row on' : 'model-row'}>
-                <button
-                  type="button"
-                  role="radio"
-                  aria-checked={selected}
-                  className="model-pick"
-                  onClick={() => update({ modelKey: k })}
-                >
-                  <span className="radio-dot" />
-                  <span>
-                    <span className="model-name">{MODELS[k].label[lang]}</span>
-                    <span className="muted small block">
-                      {t('model.size', { n: MODELS[k].sizeMB.toLocaleString() })}
-                      {m.loaded === k ? ` · ${t('settings.loaded')}` : m.cached[k] ? ` · ${t('model.cached')}` : ''}
-                    </span>
-                  </span>
-                </button>
-                {m.loading === k ? (
-                  <ProgressBar value={m.progress?.progress ?? 0} label={m.progress?.text} />
-                ) : (
-                  <div className="row-actions">
-                    {m.webgpu && m.loaded !== k && (
-                      <button
-                        type="button"
-                        className="btn ghost small"
-                        disabled={!!m.loading}
-                        onClick={() => {
-                          update({ modelKey: k });
-                          void startLoad(k);
-                        }}
-                      >
-                        {m.cached[k] ? t('model.load') : t('model.download')}
-                      </button>
-                    )}
-                    {m.cached[k] && (
-                      <ConfirmButton className="btn danger-ghost small" onConfirm={() => removeModel(k)}>
-                        {t('settings.deleteModel')}
-                      </ConfirmButton>
-                    )}
-                  </div>
-                )}
-              </li>
-            );
-          })}
-        </ul>
-        {m.error && <p className="error">{t('model.failed', { msg: m.error })}</p>}
+        <h2>{t('settings.ai')}</h2>
+        <p className="small">{t('settings.aiProvider')}</p>
+        <p className="muted small">{t('settings.aiPrivacy')}</p>
       </section>
 
       <section className="card">

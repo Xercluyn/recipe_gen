@@ -14,7 +14,7 @@ export default defineConfig({
       manifest: {
         name: 'Recipe Gen — 節約レシピ',
         short_name: 'Recipe Gen',
-        description: 'AI recipes from Japanese supermarket ingredients, on-device.',
+        description: 'Free AI recipes from Japanese supermarket ingredients — cheap and quick.',
         theme_color: '#e85d3a',
         background_color: '#fffaf5',
         display: 'standalone',
@@ -27,11 +27,10 @@ export default defineConfig({
         ]
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,svg,png,json}'],
-        maximumFileSizeToCacheInBytes: 10 * 1024 * 1024
+        globPatterns: ['**/*.{js,css,html,svg,png,json}']
       }
     })
   ],
   worker: { format: 'es' },
-  test: { environment: 'node', include: ['src/**/*.test.ts'] }
+  test: { environment: 'node', include: ['src/**/*.test.ts', 'api/**/*.test.ts'] }
 });

@@ -4,11 +4,9 @@ import { useTranslation } from 'react-i18next';
 import type { GenerateRequest, GeneratedRecipe } from '../types';
 import { loadSettings, saveRecipe, saveSettings } from '../db/db';
 import { estimateCost } from '../lib/cost';
-import { MODELS } from '../llm/models';
+import { CloudError, generateRecipe, isAbortError, type CloudErrorCode } from '../llm/cloud';
 import { currentLang } from '../i18n';
-import { useModelState } from '../hooks/useModel';
 import { IngredientPicker } from '../components/IngredientPicker';
-import { ModelSetup, NoWebGPU } from '../components/ModelSetup';
 import { RecipeCard } from '../components/RecipeCard';
 import { Icon, Segmented, Spinner } from '../components/ui';
 
@@ -43,42 +41,29 @@ function initialDraft(): Draft {
   };
 }
 
-/** Pull a readable title out of partially-streamed JSON. */
-function peekTitle(partial: string): string | null {
-  const m = partial.match(/"title"\s*:\s*"((?:[^"\\]|\\.)*)"?/);
-  return m ? m[1] : null;
-}
-
-const GEN_FLAG = 'recipe-gen:generating';
-function setGenFlag(on: boolean) {
-  try {
-    if (on) sessionStorage.setItem(GEN_FLAG, '1');
-    else sessionStorage.removeItem(GEN_FLAG);
-  } catch {
-    /* storage unavailable */
-  }
+function useOnline(): boolean {
+  const [online, setOnline] = useState(() => typeof navigator === 'undefined' || navigator.onLine !== false);
+  useEffect(() => {
+    const up = () => setOnline(true);
+    const down = () => setOnline(false);
+    window.addEventListener('online', up);
+    window.addEventListener('offline', down);
+    return () => {
+      window.removeEventListener('online', up);
+      window.removeEventListener('offline', down);
+    };
+  }, []);
+  return online;
 }
 
 export default function Generate() {
   const { t } = useTranslation();
   const lang = currentLang();
-  const model = useModelState();
+  const online = useOnline();
   const [d, setD] = useState<Draft>(initialDraft);
   const [status, setStatus] = useState<'idle' | 'generating' | 'error'>('idle');
-  const [partial, setPartial] = useState('');
-  const [tokens, setTokens] = useState(0);
-  const [crashed] = useState(() => {
-    // If the tab was killed mid-generation (iOS memory limit), the flag survives the reload.
-    let hit = false;
-    try {
-      hit = sessionStorage.getItem(GEN_FLAG) === '1';
-      sessionStorage.removeItem(GEN_FLAG);
-    } catch {
-      /* storage unavailable */
-    }
-    if (hit) saveSettings({ modelKey: 'light' });
-    return hit;
-  });
+  const [errCode, setErrCode] = useState<CloudErrorCode>('failed');
+  const [elapsed, setElapsed] = useState(0);
   const abortRef = useRef<AbortController | null>(null);
   const resultRef = useRef<HTMLDivElement>(null);
 
@@ -86,6 +71,13 @@ export default function Generate() {
     draft = d;
   }, [d]);
   useEffect(() => () => abortRef.current?.abort(), []);
+  useEffect(() => {
+    if (status !== 'generating') return;
+    const t0 = Date.now();
+    setElapsed(0);
+    const id = setInterval(() => setElapsed(Math.floor((Date.now() - t0) / 1000)), 1000);
+    return () => clearInterval(id);
+  }, [status]);
 
   const update = (p: Partial<Draft>) => setD((prev) => ({ ...prev, ...p }));
   const examples = t('generate.examples', { returnObjects: true }) as unknown as string[];
@@ -105,33 +97,21 @@ export default function Generate() {
     const ac = new AbortController();
     abortRef.current = ac;
     setStatus('generating');
-    setGenFlag(true);
-    setPartial('');
-    setTokens(0);
-    let n = 0;
     try {
-      const { generateRecipe } = await import('../llm/generate');
-      const r = await generateRecipe(req, {
-        signal: ac.signal,
-        onToken: (p) => {
-          n += 1;
-          setTokens(n);
-          setPartial(p);
-        },
-      });
+      const r = await generateRecipe(req, { signal: ac.signal });
       if (ac.signal.aborted) return;
       update({ result: r, resultReq: req, savedId: null });
       setStatus('idle');
       requestAnimationFrame(() => resultRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
     } catch (e) {
-      if (ac.signal.aborted) {
-        setStatus('idle');
+      if (ac.signal.aborted || isAbortError(e)) {
+        if (abortRef.current === ac) setStatus('idle');
       } else {
         console.error(e);
+        setErrCode(e instanceof CloudError ? e.code : 'failed');
         setStatus('error');
       }
     } finally {
-      setGenFlag(false);
       if (abortRef.current === ac) abortRef.current = null;
     }
   };
@@ -155,7 +135,7 @@ export default function Generate() {
     update({ savedId: id });
   };
 
-  const ready = model.webgpu === true && model.loaded !== null;
+  const ready = online;
   const generating = status === 'generating';
 
   return (
@@ -165,7 +145,11 @@ export default function Generate() {
         <p className="muted small">{t('app.tagline')}</p>
       </header>
 
-      {model.webgpu === false ? <NoWebGPU /> : !ready && <ModelSetup />}
+      {!online && (
+        <div className="card offline-banner" role="status">
+          {t('errors.offline')}
+        </div>
+      )}
 
       <form
         className="card form"
@@ -249,12 +233,11 @@ export default function Generate() {
           <div className="streaming" aria-live="polite">
             <div className="streaming-head">
               <Spinner />
-              <span className="streaming-title">{peekTitle(partial) || t('generate.generating')}</span>
-              <span className="muted small">{t('generate.tokens', { n: tokens })}</span>
+              <span className="streaming-title">{t('generate.thinking')}</span>
+              <span className="muted small">{t('generate.elapsed', { n: elapsed })}</span>
             </div>
-            {partial && <pre className="streaming-tail">{partial.slice(-180)}</pre>}
             <button type="button" className="btn ghost block" onClick={cancel}>
-              {t('generate.stop')}
+              {t('common.cancel')}
             </button>
           </div>
         ) : (
@@ -263,11 +246,11 @@ export default function Generate() {
             {t('generate.generateBtn')}
           </button>
         )}
-        {ready && model.loaded && (
-          <p className="muted tiny center">{t('generate.modelInUse', { name: MODELS[model.loaded].label[lang] })}</p>
+        {status === 'error' && (
+          <p className="error" role="alert">
+            {t(`errors.${errCode}`)}
+          </p>
         )}
-        {status === 'error' && <p className="error">{t('generate.failed')}</p>}
-        {crashed && status === 'idle' && !d.result && <p className="error">{t('generate.crashed')}</p>}
       </form>
 
       <div ref={resultRef}>

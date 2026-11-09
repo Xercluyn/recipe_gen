@@ -58,10 +58,3 @@ export interface GenerateRequest {
   budgetPerServingYen?: number;
   servings: number;
 }
-
-export type ModelKey = 'standard' | 'light';
-
-export interface LoadProgress {
-  progress: number; // 0..1
-  text: string;
-}

@@ -1,5 +1,5 @@
 import Dexie, { type EntityTable } from 'dexie';
-import type { Lang, ModelKey, SavedRecipe } from '../types';
+import type { Lang, SavedRecipe } from '../types';
 
 export const db = new Dexie('recipe-gen') as Dexie & {
   recipes: EntityTable<SavedRecipe, 'id'>;
@@ -97,17 +97,12 @@ export async function importAll(json: string): Promise<number> {
 
 export interface AppSettings {
   lang: Lang | null; // null = auto-detect
-  modelKey: ModelKey;
   maxMinutes: number;
   servings: number;
 }
 
-// iPhone Safari has a tight per-tab memory limit, so default to the light model there.
-const IS_IOS = typeof navigator !== 'undefined' && /iPhone|iPad|iPod/.test(navigator.userAgent);
-
 export const DEFAULT_SETTINGS: AppSettings = {
   lang: null,
-  modelKey: IS_IOS ? 'light' : 'standard',
   maxMinutes: 15,
   servings: 2,
 };
@@ -121,7 +116,6 @@ export function loadSettings(): AppSettings {
     const s = JSON.parse(raw) as Partial<AppSettings>;
     return {
       lang: s.lang === 'ja' || s.lang === 'en' ? s.lang : null,
-      modelKey: s.modelKey === 'light' || s.modelKey === 'standard' ? s.modelKey : DEFAULT_SETTINGS.modelKey,
       maxMinutes: typeof s.maxMinutes === 'number' ? s.maxMinutes : DEFAULT_SETTINGS.maxMinutes,
       servings: typeof s.servings === 'number' ? s.servings : DEFAULT_SETTINGS.servings,
     };
@@ -130,6 +124,7 @@ export function loadSettings(): AppSettings {
   }
 }
 
+/** Older versions stored extra fields (e.g. `modelKey`); loadSettings() drops them. */
 export function saveSettings(patch: Partial<AppSettings>): AppSettings {
   const next = { ...loadSettings(), ...patch };
   try {
