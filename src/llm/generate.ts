@@ -1,7 +1,8 @@
 import type { ChatCompletionMessageParam } from '@mlc-ai/web-llm';
 import type { GeneratedRecipe, GenerateRequest } from '../types';
 import { sanitizeRecipe, validateRecipe } from '../lib/validate';
-import { getEngine } from './engine';
+import { getEngine, getLoadedModel } from './engine';
+import { MODELS } from './models';
 import { buildSystemPrompt, buildUserPrompt } from './prompts';
 import { buildSchema, selectAllowedIds } from './schema';
 
@@ -32,10 +33,18 @@ async function runOnce(
   if (!engine) throw new Error(req.lang === 'ja' ? 'モデルが読み込まれていません' : 'Model is not loaded');
   if (opts.signal?.aborted) throw abortError();
 
-  const messages: ChatCompletionMessageParam[] = [
-    { role: 'system', content: buildSystemPrompt(req.lang) },
-    { role: 'user', content: buildUserPrompt(req, allowedIds, prevErrors) },
-  ];
+  const key = getLoadedModel();
+  const info = key ? MODELS[key] : undefined;
+  const system = buildSystemPrompt(req.lang);
+  const user = buildUserPrompt(req, allowedIds, prevErrors, { noThink: info?.thinking ?? true });
+  const messages: ChatCompletionMessageParam[] = info?.mergeSystem
+    ? [{ role: 'user', content: `${system}
+
+${user}` }]
+    : [
+        { role: 'system', content: system },
+        { role: 'user', content: user },
+      ];
   const onAbort = () => engine.interruptGenerate();
   opts.signal?.addEventListener('abort', onAbort);
   try {
@@ -43,9 +52,9 @@ async function runOnce(
       messages,
       stream: true,
       temperature: 0.7,
-      max_tokens: 700,
+      max_tokens: 600,
       response_format: { type: 'json_object', schema: JSON.stringify(buildSchema(allowedIds)) },
-      extra_body: { enable_thinking: false },
+      ...(info?.thinking === false ? {} : { extra_body: { enable_thinking: false } }),
     });
     let text = '';
     for await (const chunk of stream) {

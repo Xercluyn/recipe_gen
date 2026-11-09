@@ -1,6 +1,13 @@
 {
-  "app": { "name": "Recipe Gen", "tagline": "Cheap, fast meals from the supermarket." },
-  "tabs": { "generate": "Generate", "saved": "Saved", "settings": "Settings" },
+  "app": {
+    "name": "Recipe Gen",
+    "tagline": "Cheap, fast meals from the supermarket."
+  },
+  "tabs": {
+    "generate": "Generate",
+    "saved": "Saved",
+    "settings": "Settings"
+  },
   "common": {
     "cancel": "Cancel",
     "delete": "Delete",
@@ -14,7 +21,11 @@
     "loading": "Loading…",
     "error": "Something went wrong"
   },
-  "units": { "g": "g", "ml": "ml", "piece": "pc" },
+  "units": {
+    "g": "g",
+    "ml": "ml",
+    "piece": "pc"
+  },
   "categories": {
     "vegetable": "Vegetables",
     "mushroom": "Mushrooms",
@@ -31,7 +42,14 @@
     "promptLabel": "What do you feel like?",
     "promptPlaceholder": "e.g. cheap quick dinner, chicken breast in 15 min…",
     "defaultPrompt": "A cheap, quick dinner",
-    "examples": ["Cheap & quick dinner", "Chicken breast in 15 min", "Budget bean sprout side", "Healthy egg & tofu", "Make-ahead side dish", "Kid-friendly rice bowl"],
+    "examples": [
+      "Cheap & quick dinner",
+      "Chicken breast in 15 min",
+      "Budget bean sprout side",
+      "Healthy egg & tofu",
+      "Make-ahead side dish",
+      "Kid-friendly rice bowl"
+    ],
     "fridgeLabel": "In my fridge",
     "fridgeNone": "None selected — let the AI choose",
     "choose": "Choose ingredients",
@@ -52,7 +70,8 @@
     "viewSaved": "View saved recipe",
     "regenerate": "Try another",
     "failed": "Couldn't create a recipe. Please try again.",
-    "modelInUse": "Model: {{name}}"
+    "modelInUse": "Model: {{name}}",
+    "crashed": "The page reloaded last time because the phone ran out of memory. Switched to the low-memory Light model — please try again. Closing other apps and Safari tabs also helps."
   },
   "model": {
     "title": "Set up the AI model",
@@ -113,6 +132,11 @@
     "about": "About",
     "aboutText": "Recipe Gen suggests cheap, quick recipes using only ingredients commonly found in Japanese supermarkets. The AI runs on your device, so what you type is never sent to a server. Prices are estimates.",
     "a2hs": "Add to Home Screen (iPhone)",
-    "a2hsSteps": ["Open this page in Safari", "Tap the Share button (□↑) at the bottom", "Choose \"Add to Home Screen\"", "Tap \"Add\" in the top right"]
+    "a2hsSteps": [
+      "Open this page in Safari",
+      "Tap the Share button (□↑) at the bottom",
+      "Choose \"Add to Home Screen\"",
+      "Tap \"Add\" in the top right"
+    ]
   }
 }

@@ -41,7 +41,10 @@ export function initModelState(): void {
       const e = await engine();
       const ok = await e.hasWebGPU();
       set({ webgpu: ok, loaded: e.getLoadedModel() });
-      if (ok) await refreshCached();
+      if (ok) {
+        void e.cleanupRetiredModels();
+        await refreshCached();
+      }
     } catch {
       set({ webgpu: false });
     }

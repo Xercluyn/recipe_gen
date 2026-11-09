@@ -2,7 +2,7 @@
 import type { GenerateRequest, Ingredient } from '../types';
 import { INGREDIENTS, INGREDIENT_MAP, PANTRY_IDS } from '../data/ingredients';
 
-export const MAX_ALLOWED_IDS = 80;
+export const MAX_ALLOWED_IDS = 40;
 
 /** JSON schema for the LLM output; ingredient ids constrained to `allowedIds`. */
 export function buildSchema(allowedIds: string[]) {

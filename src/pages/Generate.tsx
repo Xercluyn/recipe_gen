@@ -49,6 +49,16 @@ function peekTitle(partial: string): string | null {
   return m ? m[1] : null;
 }
 
+const GEN_FLAG = 'recipe-gen:generating';
+function setGenFlag(on: boolean) {
+  try {
+    if (on) sessionStorage.setItem(GEN_FLAG, '1');
+    else sessionStorage.removeItem(GEN_FLAG);
+  } catch {
+    /* storage unavailable */
+  }
+}
+
 export default function Generate() {
   const { t } = useTranslation();
   const lang = currentLang();
@@ -57,6 +67,18 @@ export default function Generate() {
   const [status, setStatus] = useState<'idle' | 'generating' | 'error'>('idle');
   const [partial, setPartial] = useState('');
   const [tokens, setTokens] = useState(0);
+  const [crashed] = useState(() => {
+    // If the tab was killed mid-generation (iOS memory limit), the flag survives the reload.
+    let hit = false;
+    try {
+      hit = sessionStorage.getItem(GEN_FLAG) === '1';
+      sessionStorage.removeItem(GEN_FLAG);
+    } catch {
+      /* storage unavailable */
+    }
+    if (hit) saveSettings({ modelKey: 'light' });
+    return hit;
+  });
   const abortRef = useRef<AbortController | null>(null);
   const resultRef = useRef<HTMLDivElement>(null);
 
@@ -83,6 +105,7 @@ export default function Generate() {
     const ac = new AbortController();
     abortRef.current = ac;
     setStatus('generating');
+    setGenFlag(true);
     setPartial('');
     setTokens(0);
     let n = 0;
@@ -108,6 +131,7 @@ export default function Generate() {
         setStatus('error');
       }
     } finally {
+      setGenFlag(false);
       if (abortRef.current === ac) abortRef.current = null;
     }
   };
@@ -243,6 +267,7 @@ export default function Generate() {
           <p className="muted tiny center">{t('generate.modelInUse', { name: MODELS[model.loaded].label[lang] })}</p>
         )}
         {status === 'error' && <p className="error">{t('generate.failed')}</p>}
+        {crashed && status === 'idle' && !d.result && <p className="error">{t('generate.crashed')}</p>}
       </form>
 
       <div ref={resultRef}>

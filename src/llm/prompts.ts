@@ -53,7 +53,13 @@ export function formatIngredientList(allowedIds: string[], fridge: string[], lan
   return parts.join('\n');
 }
 
-export function buildUserPrompt(req: GenerateRequest, allowedIds: string[], prevErrors?: string[]): string {
+export function buildUserPrompt(
+  req: GenerateRequest,
+  allowedIds: string[],
+  prevErrors?: string[],
+  opts: { noThink?: boolean } = {},
+): string {
+  const tail = opts.noThink === false ? '' : NO_THINK;
   const list = formatIngredientList(allowedIds, req.fridge, req.lang);
   const errs = prevErrors?.length ? prevErrors.slice(0, 4).join('; ').slice(0, 300) : '';
   if (req.lang === 'ja') {
@@ -68,7 +74,7 @@ export function buildUserPrompt(req: GenerateRequest, allowedIds: string[], prev
       '出力形式: {"title":"料理名","servings":数,"totalMinutes":数,"ingredients":[{"id":"id","amount":数,"unit":"g"}],"steps":["手順"],"tip":"節約のコツ"}',
     );
     if (errs) lines.push(`前回の出力の誤り: ${errs}。直して出力してください。`);
-    return lines.join('\n') + NO_THINK;
+    return lines.join('\n') + tail;
   }
   const lines = [
     `Request: ${req.prompt.trim() || 'anything'}`,
@@ -81,5 +87,5 @@ export function buildUserPrompt(req: GenerateRequest, allowedIds: string[], prev
     'Output format: {"title":"Dish name","servings":n,"totalMinutes":n,"ingredients":[{"id":"id","amount":n,"unit":"g"}],"steps":["step"],"tip":"money-saving tip"}',
   );
   if (errs) lines.push(`Your previous output had errors: ${errs}. Fix them.`);
-  return lines.join('\n') + NO_THINK;
+  return lines.join('\n') + tail;
 }

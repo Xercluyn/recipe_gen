@@ -6,7 +6,7 @@ import {
   type WebWorkerMLCEngine,
 } from '@mlc-ai/web-llm';
 import type { LoadProgress, ModelKey } from '../types';
-import { CONTEXT_WINDOW_SIZE, MODELS } from './models';
+import { CONTEXT_WINDOW_SIZE, MODELS, RETIRED_MODEL_IDS } from './models';
 
 let engine: WebWorkerMLCEngine | null = null;
 let loadedKey: ModelKey | null = null;
@@ -82,4 +82,15 @@ export async function deleteModel(key: ModelKey): Promise<void> {
     loadedKey = null;
   }
   await deleteModelAllInfoInCache(MODELS[key].id);
+}
+
+/** Free storage used by models that older app versions downloaded. */
+export async function cleanupRetiredModels(): Promise<void> {
+  for (const id of RETIRED_MODEL_IDS) {
+    try {
+      if (await hasModelInCache(id)) await deleteModelAllInfoInCache(id);
+    } catch {
+      /* ignore */
+    }
+  }
 }
