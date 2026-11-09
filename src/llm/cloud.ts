@@ -80,7 +80,7 @@ export async function generateRecipe(
       res = await fetch(`${API_URL.replace(/\/+$/, '')}/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(req),
+        body: JSON.stringify({ ...req, format: 2 }), // 2 = we render {ingredient_id} tokens
         signal: ac.signal,
       });
       body = await res.json().catch(() => null);

@@ -10,9 +10,11 @@ export function buildSystemPrompt(lang: Lang): string {
     return [
       'あなたは節約上手な家庭料理の料理人です。日本のスーパーで安く買える食材だけで、早く簡単に作れるレシピを1つ考えます。',
       '',
+      '【最重要】リクエストの料理を作る。料理名(例: 照り焼きチキン、親子丼)が書かれていたら、その料理そのものを作り、titleにもその料理名を入れる。別の料理に変えない。「安くて早い夕飯」のような希望だけのときは、合う料理を選んで具体的な料理名をtitleにする(リクエストの文をそのままtitleにしない)。',
+      '',
       '【材料のルール】',
       '- 材料は「使える食材」リストのidだけを使う。リストにない食材(水以外)は使わない。',
-      '- 冷蔵庫の食材を優先。材料は3〜8個。',
+      '- 冷蔵庫の食材は、料理に合うものはすべて使う。足りない物だけリストから買い足す。材料は3〜8個。',
       '- servingsは指定の人数と同じ数にする。amountは必ずその人数分の合計量。',
       '- unitは各食材の[ ]に書かれた単位を使う。塩・こしょうなど少量はunit "pinch"(少々)、amountは1。',
       '- 1人分の目安: 肉・魚100〜150g、野菜50〜150g、卵1〜2個、醤油などの調味料は5〜15ml。',
@@ -35,9 +37,11 @@ export function buildSystemPrompt(lang: Lang): string {
   return [
     'You are a thrifty home cook. Create ONE cheap, quick home-cooking recipe using only ingredients sold in Japanese supermarkets.',
     '',
+    'MOST IMPORTANT: cook what the request asks for. If it names a dish (e.g. teriyaki chicken, oyakodon), make THAT dish and put its name in the title. Never switch to a different dish. If the request only describes a wish (e.g. "cheap quick dinner"), choose a fitting dish and give it a real dish name (never copy the request as the title).',
+    '',
     'INGREDIENT RULES',
     '- Use ONLY ingredient ids from the "Allowed ingredients" list. Nothing else except water.',
-    '- Prefer the fridge items. 3-8 ingredients.',
+    '- Use every fridge item that suits the dish; buy only what is missing from the list. 3-8 ingredients.',
     '- "servings" must equal the requested number. Every amount is the TOTAL for that many servings.',
     '- Use the unit shown in [ ] for each ingredient. For salt/pepper "to taste" use unit "pinch" with amount 1.',
     '- Per serving guide: meat/fish 100-150 g, vegetables 50-150 g, eggs 1-2, liquid seasonings 5-15 ml.',
@@ -113,6 +117,7 @@ export function buildUserPrompt(
     lines.push('', '使える食材 (id: 名前 [単位]):', list, '');
     lines.push('出力例 (形式の参考。内容はリクエストに合わせる):', EXAMPLE_JA);
     if (errs) lines.push('', '前回の出力には次の誤りがありました。すべて直して、レシピ全体をもう一度出力してください:', errs);
+    if (req.prompt.trim()) lines.push('', `忘れずに: 「${req.prompt.trim()}」のレシピを作る。`);
     return lines.join('\n') + tail;
   }
   const lines = [
@@ -124,5 +129,6 @@ export function buildUserPrompt(
   lines.push('', 'Allowed ingredients (id: name [unit]):', list, '');
   lines.push('Example (format only - fit the content to the request):', EXAMPLE_EN);
   if (errs) lines.push('', 'Your previous output had these errors. Fix ALL of them and output the whole recipe again:', errs);
+  if (req.prompt.trim()) lines.push('', `Remember: the recipe must be "${req.prompt.trim()}".`);
   return lines.join('\n') + tail;
 }

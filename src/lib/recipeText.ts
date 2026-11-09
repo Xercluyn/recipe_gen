@@ -5,11 +5,30 @@
 import type { GeneratedRecipe, Lang, RecipeIngredient } from '../types';
 import { INGREDIENTS, INGREDIENT_MAP, getIngredientName } from '../data/ingredients';
 
-export const TOKEN_RE = /\{([a-z0-9_]+)\}/g;
+/**
+ * Ingredient token. Tolerates what models actually emit: `{id}`, `{ id }`, `{Green_Onion}`,
+ * `{green-onion}`, full-width `｛id｝`. Use `tokenId()` to get the canonical id.
+ */
+export const TOKEN_RE = /[{｛]\s*([A-Za-z][A-Za-z0-9_\- ]{0,40}?)\s*[}｝]/g;
+
+/** Canonical id for a raw token body: lower case, spaces/hyphens -> underscores. */
+export function tokenId(raw: string): string {
+  return raw.trim().toLowerCase().replace(/[\s-]+/g, '_');
+}
+
+/** "chicken_minced" -> "chicken minced" (last resort for ids not in the catalogue). */
+export function humanizeId(id: string): string {
+  return id.replace(/_/g, ' ').trim();
+}
 
 /** Ingredient ids referenced as {id} tokens in one step. */
 export function stepRefs(step: string): string[] {
-  return [...step.matchAll(TOKEN_RE)].map((m) => m[1]);
+  return [...step.matchAll(TOKEN_RE)].map((m) => tokenId(m[1]));
+}
+
+/** Rewrite every token in canonical `{id}` form. */
+export function canonicalizeTokens(step: string): string {
+  return step.replace(TOKEN_RE, (_m, raw: string) => `{${tokenId(raw)}}`);
 }
 
 /** Ingredient ids referenced anywhere in the steps. */
@@ -136,10 +155,10 @@ export function renderSteps(recipe: Pick<GeneratedRecipe, 'steps' | 'ingredients
     const parts: StepPart[] = [];
     let last = 0;
     for (const m of step.matchAll(TOKEN_RE)) {
-      const id = m[1];
+      const id = tokenId(m[1]);
       if (m.index! > last) parts.push({ text: step.slice(last, m.index) });
       const ri = byId.get(id);
-      const name = INGREDIENT_MAP[id] ? getIngredientName(id, lang) : id.replace(/_/g, ' ');
+      const name = INGREDIENT_MAP[id] ? getIngredientName(id, lang) : humanizeId(id);
       if (ri && !shown.has(id)) {
         shown.add(id);
         parts.push({ id, name, amount: ri });
@@ -162,5 +181,15 @@ export function renderStepsText(
   const [open, close] = lang === 'ja' ? ['（', '）'] : [' (', ')'];
   return renderSteps(recipe, lang).map((parts) =>
     parts.map((p) => ('text' in p ? p.text : p.amount ? `${p.name}${open}${formatAmount(p.amount)}${close}` : p.name)).join(''),
+  );
+}
+
+/** Steps with tokens replaced by plain ingredient names (no amounts). For clients that can't render tokens. */
+export function stepsWithNames(steps: string[], lang: Lang): string[] {
+  return steps.map((step) =>
+    step.replace(TOKEN_RE, (_m, raw: string) => {
+      const id = tokenId(raw);
+      return INGREDIENT_MAP[id] ? getIngredientName(id, lang) : humanizeId(id);
+    }),
   );
 }

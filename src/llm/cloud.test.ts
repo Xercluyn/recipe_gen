@@ -50,7 +50,7 @@ describe('generateRecipe (cloud)', () => {
     const [url, init] = fetchMock.mock.calls[0];
     expect(String(url)).toMatch(/\/generate$/);
     expect(init.method).toBe('POST');
-    expect(JSON.parse(init.body)).toEqual(req);
+    expect(JSON.parse(init.body)).toEqual({ ...req, format: 2 });
   });
 
   it('falls back to a sanitized recipe when validation fails but enough remains', async () => {

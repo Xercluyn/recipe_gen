@@ -174,3 +174,21 @@ describe('worker', () => {
     expect(run).not.toHaveBeenCalled();
   });
 });
+
+describe('step format negotiation', () => {
+  it('old clients (no format) get plain ingredient names', async () => {
+    const { env } = makeEnv([openai(VALID)]);
+    const res = await worker.fetch(post(BODY), env);
+    const d = (await res.json()) as { recipe: { steps: string[] }; format: number };
+    expect(d.format).toBe(1);
+    expect(d.recipe.steps.join('')).not.toMatch(/[{}]/);
+    expect(d.recipe.steps[0]).toContain('卵');
+  });
+  it('format 2 clients get {id} tokens', async () => {
+    const { env } = makeEnv([openai(VALID)]);
+    const res = await worker.fetch(post({ ...BODY, format: 2 }), env);
+    const d = (await res.json()) as { recipe: { steps: string[] }; format: number };
+    expect(d.format).toBe(2);
+    expect(d.recipe.steps[0]).toContain('{egg}');
+  });
+});

@@ -3,6 +3,13 @@
 import type { GenerateRequest, Lang } from '../../src/types';
 import { INGREDIENT_MAP } from '../../src/data/ingredients';
 import { generateWith, RecipeGenerationError, type Complete, type ChatMessage } from '../../src/llm/core';
+import { stepsWithNames } from '../../src/lib/recipeText';
+
+/**
+ * Step format the client understands. 2 = steps contain {ingredient_id} tokens that the app renders.
+ * Clients that don't send `format: 2` (older cached app versions) get plain ingredient names instead.
+ */
+export const TOKEN_FORMAT = 2;
 
 export interface Env {
   AI: Ai;
@@ -201,6 +208,7 @@ export async function generateRecipe(env: Env, req: GenerateRequest) {
     noThink: cfg.noThink,
     mergeSystem: cfg.mergeSystem,
     attempts: 3,
+    onAttempt: (a) => console.log(JSON.stringify({ event: 'attempt', prompt: req.prompt, ...a })),
   });
   return { recipe, model };
 }
@@ -237,8 +245,11 @@ export default {
     }
 
     let req: GenerateRequest;
+    let format = 1;
     try {
-      req = parseRequest(await readBody(request));
+      const body = await readBody(request);
+      req = parseRequest(body);
+      if ((body as { format?: unknown }).format === TOKEN_FORMAT) format = TOKEN_FORMAT;
     } catch (e) {
       const message = e instanceof BadRequest ? e.message : 'invalid request';
       return json({ error: 'bad_request', message }, 400, origin);
@@ -246,7 +257,8 @@ export default {
 
     try {
       const { recipe, model } = await generateRecipe(env, req);
-      return json({ recipe, model }, 200, origin);
+      const out = format === TOKEN_FORMAT ? recipe : { ...recipe, steps: stepsWithNames(recipe.steps, req.lang) };
+      return json({ recipe: out, model, format }, 200, origin);
     } catch (e) {
       if (e instanceof QuotaError || isQuotaError(e)) return json({ error: 'quota' }, 429, origin);
       if (e instanceof RecipeGenerationError) return json({ error: 'failed', message: e.message }, 422, origin);

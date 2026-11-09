@@ -6,7 +6,21 @@ import './i18n';
 import App from './App';
 import './styles.css';
 
-registerSW({ immediate: true });
+registerSW({
+  immediate: true,
+  // iOS keeps home-screen apps alive for a long time; look for a new version whenever the
+  // app comes back to the foreground (and hourly) so users never run a stale build.
+  onRegisteredSW(_url, registration) {
+    if (!registration) return;
+    const check = () => {
+      if (navigator.onLine) registration.update().catch(() => {});
+    };
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') check();
+    });
+    setInterval(check, 60 * 60 * 1000);
+  },
+});
 
 // Ask the browser not to evict saved recipes.
 try {

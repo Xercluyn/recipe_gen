@@ -30,6 +30,8 @@ export interface CoreOptions {
   mergeSystem?: boolean;
   /** Total attempts (first try + retries with error feedback). Default 3. */
   attempts?: number;
+  /** Called after each attempt (for server logs). */
+  onAttempt?: (info: { attempt: number; title?: string; errors: string[] }) => void;
 }
 
 export class RecipeGenerationError extends Error {
@@ -93,6 +95,7 @@ export async function generateWith(
       continue;
     }
     const c = checkRecipe(v.recipe, req);
+    opts.onAttempt?.({ attempt: i + 1, title: c.recipe.title, errors: c.errors });
     if (c.errors.length === 0) return c.recipe;
     if (!best || c.errors.length < best.errors) best = { recipe: c.recipe, errors: c.errors.length };
     errors = c.errors;

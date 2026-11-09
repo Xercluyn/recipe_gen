@@ -3,7 +3,7 @@
 // - reports everything else as errors so the model is asked again with feedback.
 import type { GeneratedRecipe, GenerateRequest, Ingredient, RecipeIngredient } from '../types';
 import { INGREDIENT_MAP, getGramsPerPiece } from '../data/ingredients';
-import { allRefs, findMentions, findVagueWords, renderSteps, scaleRecipe } from './recipeText';
+import { allRefs, canonicalizeTokens, findMentions, findVagueWords, renderSteps, scaleRecipe } from './recipeText';
 
 /** Seasonings that may be added automatically as 少々 / "a pinch" when a step uses them. */
 export const PINCHABLE = new Set(['salt', 'pepper', 'salt_pepper', 'ichimi', 'shichimi', 'sesame_seeds']);
@@ -28,7 +28,52 @@ const OVERRIDES_G: Record<string, [number, number]> = {
   tomato_can: [20, 250],
   curry_roux: [10, 60],
   stew_roux: [10, 60],
+  // small-amount items in otherwise "bulk" categories
+  katakuriko: [0.5, 30],
+  flour: [1, 80],
+  panko: [2, 50],
+  tempura_flour: [5, 80],
+  wakame_dried: [0.5, 10],
+  hijiki: [1, 15],
+  kizami_nori: [0.2, 5],
+  katsuobushi: [0.5, 10],
+  kombu: [1, 20],
+  sakura_ebi: [0.5, 10],
+  shirasu: [3, 60],
+  butter: [2, 30],
+  margarine: [2, 30],
+  powdered_cheese: [1, 20],
+  beni_shoga: [1, 20],
+  agedama: [2, 30],
+  fu: [1, 20],
+  gelatin: [0.5, 10],
+  kinako: [1, 20],
+  seaweed_salad: [0.5, 10],
+  zha_cai: [3, 60],
+  walnuts: [3, 40],
+  peanuts: [3, 40],
+  raisins: [3, 40],
+  kiriboshi_daikon: [3, 30],
 };
+
+/**
+ * When the request looks like a dish name (short, no descriptive particles), the title must
+ * share a meaningful piece with it: a 2-char chunk that isn't plain hiragana (ja), or a 4+ letter
+ * word (en). "照り焼きチキン" ✓ "鶏ひき肉の照り焼き", ✗ "麻婆豆腐".
+ */
+export function titleMatchesDish(prompt: string, title: string, lang: GenerateRequest['lang']): boolean | null {
+  const p = prompt.trim();
+  if (!p) return null;
+  if (lang === 'ja') {
+    if (p.length > 12 || /[でをにがはもへ、。,\s]|ため|みたい|ような|簡単|安い|早い|夕飯|ご飯|おかず|弁当/.test(p)) return null;
+    const grams = [...p].slice(0, -1).map((c, i) => c + p[i + 1]).filter((g) => !/^[ぁ-ゟ]+$/.test(g));
+    if (!grams.length) return null;
+    return grams.some((g) => title.includes(g));
+  }
+  const words = p.toLowerCase().split(/[^a-z]+/).filter((w) => w.length >= 4);
+  if (!words.length || words.length > 4 || /\b(with|using|for|quick|cheap|easy|dinner|lunch|something)\b/.test(p.toLowerCase())) return null;
+  return words.some((w) => title.toLowerCase().includes(w));
+}
 
 export interface ConsistencyResult {
   recipe: GeneratedRecipe;
@@ -76,7 +121,7 @@ function normalizeUnit(ri: RecipeIngredient, errors: string[], fixes: string[]):
 
 export function checkRecipe(
   input: GeneratedRecipe,
-  req: Pick<GenerateRequest, 'servings' | 'lang'>,
+  req: Pick<GenerateRequest, 'servings' | 'lang'> & { fridge?: string[]; prompt?: string },
 ): ConsistencyResult {
   const errors: string[] = [];
   const fixes: string[] = [];
@@ -95,7 +140,7 @@ export function checkRecipe(
       merged.set(ri.id, { ...ri });
     }
   }
-  let recipe: GeneratedRecipe = { ...input, ingredients: [...merged.values()] };
+  let recipe: GeneratedRecipe = { ...input, ingredients: [...merged.values()], steps: input.steps.map(canonicalizeTokens) };
 
   // 2. Servings must be exactly what the user asked for.
   if (recipe.servings !== req.servings) {
@@ -125,6 +170,18 @@ export function checkRecipe(
     }
   }
   if (used.size === 0) errors.push('steps must reference ingredients as {ingredient_id}');
+  if (req.prompt) {
+    const match = titleMatchesDish(req.prompt, recipe.title, lang);
+    if (match === false) {
+      errors.push(`the user asked for "${req.prompt.trim()}" — make exactly that dish and include its name in the title`);
+    } else if (match === null && recipe.title.trim() === req.prompt.trim()) {
+      errors.push('the title repeats the request — give the dish its real name (e.g. 鶏むね肉のポン酢炒め)');
+    }
+  }
+  const fridge = (req.fridge ?? []).filter((id) => INGREDIENT_MAP[id]);
+  if (fridge.length && !fridge.some((id) => listed.has(id))) {
+    errors.push(`use the user's fridge items (${fridge.join(', ')}) — none of them are in the recipe`);
+  }
 
   // 4. Step count, length and vagueness.
   if (recipe.steps.length < STEP_COUNT.min || recipe.steps.length > STEP_COUNT.max) {
