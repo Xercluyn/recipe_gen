@@ -2,7 +2,7 @@ import type { GeneratedRecipe, GenerateRequest, RecipeIngredient } from '../type
 import { INGREDIENT_MAP } from '../data/ingredients';
 
 export const TIME_TOLERANCE_MIN = 5;
-const UNITS = new Set(['g', 'ml', 'piece']);
+const UNITS = new Set(['g', 'ml', 'piece', 'pinch']);
 
 export type ValidationResult =
   | { ok: true; recipe: GeneratedRecipe }
@@ -53,7 +53,7 @@ export function validateRecipe(
       if (!id || !INGREDIENT_MAP[id]) errors.push(`ingredients[${i}]: unknown ingredient id "${String(ri.id)}"`);
       if (!isNum(ri.amount) || ri.amount <= 0) errors.push(`ingredients[${i}]: amount must be > 0`);
       if (typeof ri.unit !== 'string' || !UNITS.has(ri.unit)) {
-        errors.push(`ingredients[${i}]: unit must be g, ml or piece`);
+        errors.push(`ingredients[${i}]: unit must be g, ml, piece or pinch`);
       }
       ingredients.push({ id, amount: ri.amount as number, unit: ri.unit as RecipeIngredient['unit'] });
     });
@@ -70,6 +70,9 @@ export function validateRecipe(
     if (r.steps.length < 1 || r.steps.length > 15) errors.push('steps must contain 1 to 15 items');
   }
 
+  if (r.description !== undefined && r.description !== null && typeof r.description !== 'string') {
+    errors.push('description must be a string if present');
+  }
   if (r.tip !== undefined && r.tip !== null && typeof r.tip !== 'string') {
     errors.push('tip must be a string if present');
   }
@@ -83,6 +86,8 @@ export function validateRecipe(
     ingredients,
     steps,
   };
+  const description = typeof r.description === 'string' ? r.description.trim() : '';
+  if (description) recipe.description = description;
   const tip = typeof r.tip === 'string' ? r.tip.trim() : '';
   if (tip) recipe.tip = tip;
   return { ok: true, recipe };
@@ -116,6 +121,8 @@ export function sanitizeRecipe(r: GeneratedRecipe): GeneratedRecipe {
     ingredients,
     steps,
   };
+  const description = typeof r.description === 'string' ? r.description.trim() : '';
+  if (description) out.description = description;
   const tip = typeof r.tip === 'string' ? r.tip.trim() : '';
   if (tip) out.tip = tip;
   return out;

@@ -5,12 +5,13 @@ import { INGREDIENTS, INGREDIENT_MAP, PANTRY_IDS } from '../data/ingredients';
 export const MAX_ALLOWED_IDS = 40;
 
 /** JSON schema for the LLM output; ingredient ids constrained to `allowedIds`. */
-export function buildSchema(allowedIds: string[]) {
+export function buildSchema(allowedIds: string[], servings?: number) {
   return {
     type: 'object',
     properties: {
       title: { type: 'string' },
-      servings: { type: 'integer' },
+      description: { type: 'string' },
+      servings: servings ? { type: 'integer', enum: [servings] } : { type: 'integer' },
       totalMinutes: { type: 'integer' },
       ingredients: {
         type: 'array',
@@ -19,7 +20,7 @@ export function buildSchema(allowedIds: string[]) {
           properties: {
             id: { type: 'string', enum: [...new Set(allowedIds)] },
             amount: { type: 'number' },
-            unit: { type: 'string', enum: ['g', 'ml', 'piece'] },
+            unit: { type: 'string', enum: ['g', 'ml', 'piece', 'pinch'] },
           },
           required: ['id', 'amount', 'unit'],
           additionalProperties: false,
@@ -28,7 +29,7 @@ export function buildSchema(allowedIds: string[]) {
       steps: { type: 'array', items: { type: 'string' } },
       tip: { type: 'string' },
     },
-    required: ['title', 'servings', 'totalMinutes', 'ingredients', 'steps'],
+    required: ['title', 'description', 'servings', 'totalMinutes', 'ingredients', 'steps', 'tip'],
     additionalProperties: false,
   };
 }

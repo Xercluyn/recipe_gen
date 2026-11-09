@@ -200,7 +200,7 @@ export async function generateRecipe(env: Env, req: GenerateRequest) {
     maxIds: 80,
     noThink: cfg.noThink,
     mergeSystem: cfg.mergeSystem,
-    attempts: 2,
+    attempts: 3,
   });
   return { recipe, model };
 }

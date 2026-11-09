@@ -11,7 +11,8 @@ const VALID = {
     { id: 'moyashi', amount: 200, unit: 'g' },
     { id: 'egg', amount: 2, unit: 'piece' },
   ],
-  steps: ['卵を溶く', 'もやしを炒める', '卵を加えて炒める'],
+  description: 'ふわふわ卵とシャキシャキもやしの節約おかず。',
+  steps: ['{egg}をボウルに溶きほぐす。', 'フライパンを中火で熱し、{moyashi}を2分炒める。', '{egg}を回し入れ、半熟になるまで30秒ほど混ぜて火を止める。'],
   tip: 'もやしは安い日にまとめ買い',
 };
 
@@ -69,12 +70,12 @@ describe('worker', () => {
     expect(second.messages.at(-1)!.content).toContain('dragon_fruit_xx');
   });
 
-  it('garbage twice -> 422', async () => {
-    const { env, run } = makeEnv([openai('not json at all'), openai('{{{')]);
+  it('garbage on every attempt -> 422', async () => {
+    const { env, run } = makeEnv([openai('not json at all'), openai('{{{'), openai('nope')]);
     const res = await worker.fetch(post(BODY), env);
     expect(res.status).toBe(422);
     expect(((await res.json()) as { error: string }).error).toBe('failed');
-    expect(run).toHaveBeenCalledTimes(2);
+    expect(run).toHaveBeenCalledTimes(3);
   });
 
   it('legacy { response: object } shape is accepted', async () => {

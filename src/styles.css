@@ -816,3 +816,38 @@ input:focus {
 .icon {
   flex: 0 0 auto;
 }
+
+/* Recipe description, servings stepper, ingredient names inside steps */
+.recipe-desc {
+  margin: -4px 0 10px;
+  color: var(--muted, #7a6a60);
+  font-size: 15px;
+  line-height: 1.5;
+}
+.pill.stepper {
+  gap: 6px;
+  padding-left: 4px;
+  padding-right: 4px;
+}
+.pill.stepper button {
+  min-width: 32px;
+  min-height: 32px;
+  border: none;
+  border-radius: 999px;
+  background: var(--accent, #e85d3a);
+  color: #fff;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+}
+.pill.stepper button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+.step-ing {
+  font-weight: 700;
+}
+.step-amt {
+  font-weight: 400;
+  color: var(--accent, #e85d3a);
+}

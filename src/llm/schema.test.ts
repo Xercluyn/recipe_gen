@@ -40,8 +40,10 @@ describe('buildSchema', () => {
     const s = buildSchema(['egg', 'tofu', 'egg']);
     const item = s.properties.ingredients.items.properties;
     expect(item.id.enum).toEqual(['egg', 'tofu']);
-    expect(item.unit.enum).toEqual(['g', 'ml', 'piece']);
-    expect(s.required).toEqual(['title', 'servings', 'totalMinutes', 'ingredients', 'steps']);
+    expect(item.unit.enum).toEqual(['g', 'ml', 'piece', 'pinch']);
+    expect(s.required).toEqual(['title', 'description', 'servings', 'totalMinutes', 'ingredients', 'steps', 'tip']);
+    expect(s.properties.servings).toEqual({ type: 'integer' });
+    expect(buildSchema(['egg'], 3).properties.servings).toEqual({ type: 'integer', enum: [3] });
     expect(() => JSON.parse(JSON.stringify(s))).not.toThrow();
   });
 });
@@ -88,7 +90,8 @@ describe('prompts', () => {
     expect(text).toMatch(/moyashi: もやし/);
     expect(text.indexOf('egg:')).toBeLessThan(text.indexOf('moyashi:'));
     expect(text.indexOf('moyashi:')).toBeLessThan(text.indexOf('salt:'));
-    expect(formatIngredientList(['egg'], [], 'en')).toContain('egg: 卵 (Egg)');
+    expect(formatIngredientList(['egg'], [], 'en')).toContain('egg: Egg / 卵 [piece]');
+    expect(text).toMatch(/moyashi: もやし \[g\]/);
   });
 
   it('user prompt includes constraints, budget, errors and /no_think by default', () => {

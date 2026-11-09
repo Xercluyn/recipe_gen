@@ -24,7 +24,8 @@
   "units": {
     "g": "g",
     "ml": "ml",
-    "piece": "個"
+    "piece": "個",
+    "pinch": "少々"
   },
   "categories": {
     "vegetable": "野菜",
@@ -99,7 +100,10 @@
     "prompt": "リクエスト：{{p}}",
     "costNote": "価格は一般的なスーパーの目安です（常備調味料は含みません）。",
     "share": "共有",
-    "copied": "コピーしました"
+    "copied": "コピーしました",
+    "servingsAdjust": "人数",
+    "fewer": "人数を減らす",
+    "more": "人数を増やす"
   },
   "settings": {
     "title": "設定",

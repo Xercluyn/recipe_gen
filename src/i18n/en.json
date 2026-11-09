@@ -24,7 +24,8 @@
   "units": {
     "g": "g",
     "ml": "ml",
-    "piece": "pc"
+    "piece": "pc",
+    "pinch": "a pinch"
   },
   "categories": {
     "vegetable": "Vegetables",
@@ -99,7 +100,10 @@
     "prompt": "Request: {{p}}",
     "costNote": "Prices are typical Japanese supermarket estimates (pantry staples excluded).",
     "share": "Share",
-    "copied": "Copied"
+    "copied": "Copied",
+    "servingsAdjust": "Servings",
+    "fewer": "Fewer servings",
+    "more": "More servings"
   },
   "settings": {
     "title": "Settings",

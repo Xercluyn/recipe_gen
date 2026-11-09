@@ -1,13 +1,21 @@
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { GeneratedRecipe } from '../types';
 import { INGREDIENT_MAP, getIngredientName } from '../data/ingredients';
 import { costPerServing, estimateCost } from '../lib/cost';
 import { currentLang } from '../i18n';
 import { formatAmount, yen } from './format';
+import { renderSteps, scaleRecipe } from '../lib/recipeText';
 import { Icon } from './ui';
 
-export function RecipeMeta({ recipe }: { recipe: Pick<GeneratedRecipe, 'totalMinutes' | 'servings' | 'ingredients'> }) {
+export function RecipeMeta({
+  recipe,
+  onServings,
+}: {
+  recipe: Pick<GeneratedRecipe, 'totalMinutes' | 'servings' | 'ingredients'>;
+  /** When given, servings becomes a −/+ stepper that rescales all amounts. */
+  onServings?: (n: number) => void;
+}) {
   const { t } = useTranslation();
   return (
     <div className="meta">
@@ -15,10 +23,33 @@ export function RecipeMeta({ recipe }: { recipe: Pick<GeneratedRecipe, 'totalMin
         <Icon name="clock" size={16} />
         {t('common.minutes', { n: recipe.totalMinutes })}
       </span>
-      <span className="pill">
-        <Icon name="user" size={16} />
-        {t('common.servings', { n: recipe.servings })}
-      </span>
+      {onServings ? (
+        <span className="pill stepper" role="group" aria-label={t('detail.servingsAdjust')}>
+          <button
+            type="button"
+            aria-label={t('detail.fewer')}
+            disabled={recipe.servings <= 1}
+            onClick={() => onServings(recipe.servings - 1)}
+          >
+            −
+          </button>
+          <Icon name="user" size={16} />
+          {t('common.servings', { n: recipe.servings })}
+          <button
+            type="button"
+            aria-label={t('detail.more')}
+            disabled={recipe.servings >= 8}
+            onClick={() => onServings(recipe.servings + 1)}
+          >
+            +
+          </button>
+        </span>
+      ) : (
+        <span className="pill">
+          <Icon name="user" size={16} />
+          {t('common.servings', { n: recipe.servings })}
+        </span>
+      )}
       <span className="pill accent">{t('common.perServing', { n: yen(costPerServing(recipe)) })}</span>
     </div>
   );
@@ -35,13 +66,17 @@ export function RecipeCard({
 }) {
   const { t } = useTranslation();
   const lang = currentLang();
-  const total = estimateCost(recipe);
+  const [servings, setServings] = useState(recipe.servings);
+  const shown = scaleRecipe(recipe, servings);
+  const total = estimateCost(shown);
+  const steps = renderSteps(shown, lang);
 
   return (
     <article className="card recipe">
       {header}
       <h2 className="recipe-title">{recipe.title}</h2>
-      <RecipeMeta recipe={recipe} />
+      {recipe.description && <p className="recipe-desc">{recipe.description}</p>}
+      <RecipeMeta recipe={shown} onServings={setServings} />
 
       <section className="recipe-section">
         <div className="section-head">
@@ -49,7 +84,7 @@ export function RecipeCard({
           <span className="muted small">{t('common.total', { n: yen(total) })}</span>
         </div>
         <ul className="ing-list">
-          {recipe.ingredients.map((ri, i) => {
+          {shown.ingredients.map((ri, i) => {
             const pantry = !!INGREDIENT_MAP[ri.id]?.pantry;
             const c = pantry ? 0 : estimateCost({ ingredients: [ri] });
             return (
@@ -67,10 +102,21 @@ export function RecipeCard({
       <section className="recipe-section">
         <h3>{t('detail.steps')}</h3>
         <ol className="steps">
-          {recipe.steps.map((s, i) => (
+          {steps.map((parts, i) => (
             <li key={i}>
               <span className="step-num">{i + 1}</span>
-              <p>{s}</p>
+              <p>
+                {parts.map((p, j) =>
+                  'text' in p ? (
+                    <span key={j}>{p.text}</span>
+                  ) : (
+                    <span key={j} className="step-ing">
+                      {p.name}
+                      {p.amount && <span className="step-amt">{lang === 'ja' ? `（${formatAmount(p.amount, t, lang)}）` : ` (${formatAmount(p.amount, t, lang)})`}</span>}
+                    </span>
+                  ),
+                )}
+              </p>
             </li>
           ))}
         </ol>

@@ -256,6 +256,7 @@ export default function Generate() {
       <div ref={resultRef}>
         {d.result && !generating && (
           <RecipeCard
+            key={`${d.result.title}-${d.result.steps.length}-${d.result.ingredients.length}`}
             recipe={d.result}
             actions={
               <>

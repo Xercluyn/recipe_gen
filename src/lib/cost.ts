@@ -18,6 +18,7 @@ const DEFAULT_GRAMS_PER_PIECE = 100;
  */
 export function packFraction(ri: RecipeIngredient): number {
   const ing = INGREDIENT_MAP[ri.id];
+  if (ri.unit === 'pinch') return 0; // 少々 / to taste
   if (!ing || !Number.isFinite(ri.amount) || ri.amount <= 0 || ing.packAmount <= 0) return 0;
   const recipePiece = ri.unit === 'piece';
   const packPiece = ing.unit === 'piece';

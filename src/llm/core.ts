@@ -3,6 +3,7 @@
 // Used by the Cloudflare Worker (api/) — keep free of browser/Worker-only APIs.
 import type { GeneratedRecipe, GenerateRequest } from '../types';
 import { sanitizeRecipe, validateRecipe } from '../lib/validate';
+import { checkRecipe } from '../lib/consistency';
 import { buildSystemPrompt, buildUserPrompt } from './prompts';
 import { buildSchema, selectAllowedIds } from './schema';
 import { INGREDIENTS, PANTRY_IDS } from '../data/ingredients';
@@ -27,7 +28,7 @@ export interface CoreOptions {
   noThink?: boolean;
   /** Model has no system role — prepend system prompt to the user turn. */
   mergeSystem?: boolean;
-  /** Total attempts (first try + retries with error feedback). */
+  /** Total attempts (first try + retries with error feedback). Default 3. */
   attempts?: number;
 }
 
@@ -69,8 +70,10 @@ export async function generateWith(
   opts: CoreOptions = {},
 ): Promise<GeneratedRecipe> {
   const allowedIds = selectAllowedIds(req, INGREDIENTS, PANTRY_IDS, opts.maxIds ?? 80);
-  const schema = buildSchema(allowedIds);
-  const attempts = Math.max(1, opts.attempts ?? 2);
+  const schema = buildSchema(allowedIds, req.servings);
+  const attempts = Math.max(1, opts.attempts ?? 3);
+  /** Best structurally-valid candidate so far (fewest consistency errors). */
+  let best: { recipe: GeneratedRecipe; errors: number } | undefined;
   let lastValue: unknown;
   let errors: string[] | undefined;
 
@@ -85,14 +88,22 @@ export async function generateWith(
     }
     lastValue = value;
     const v = validateRecipe(value, { maxMinutes: req.maxMinutes });
-    if (v.ok) return v.recipe;
-    errors = v.errors;
+    if (!v.ok) {
+      errors = v.errors;
+      continue;
+    }
+    const c = checkRecipe(v.recipe, req);
+    if (c.errors.length === 0) return c.recipe;
+    if (!best || c.errors.length < best.errors) best = { recipe: c.recipe, errors: c.errors.length };
+    errors = c.errors;
   }
 
-  if (lastValue && typeof lastValue === 'object') {
+  // Out of attempts: a structurally valid recipe with minor issues beats an error.
+  if (best && best.errors <= 2) return best.recipe;
+  if (!best && lastValue && typeof lastValue === 'object') {
     try {
       const s = sanitizeRecipe(lastValue as GeneratedRecipe);
-      if (s.ingredients.length >= 2 && s.steps.length >= 1 && s.title) return s;
+      if (s.ingredients.length >= 2 && s.steps.length >= 1 && s.title) return checkRecipe(s, req).recipe;
     } catch {
       /* fall through */
     }

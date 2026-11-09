@@ -27,15 +27,18 @@ export interface Ingredient {
 export interface RecipeIngredient {
   id: string; // Ingredient.id
   amount: number;
-  unit: 'g' | 'ml' | 'piece';
+  unit: 'g' | 'ml' | 'piece' | 'pinch'; // pinch = 少々 / to taste (cost 0)
 }
 
 /** Exactly what the LLM produces (validated). */
 export interface GeneratedRecipe {
   title: string;
+  /** One short sentence describing the dish (taste/texture/why it's cheap). */
+  description?: string;
   servings: number;
   totalMinutes: number;
   ingredients: RecipeIngredient[];
+  /** One action per step. Ingredients appear as {ingredient_id} tokens, rendered by the app. */
   steps: string[];
   tip?: string;
 }

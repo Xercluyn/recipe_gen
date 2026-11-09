@@ -8,6 +8,7 @@ import { getIngredientName } from '../data/ingredients';
 import { currentLang } from '../i18n';
 import { RecipeCard } from '../components/RecipeCard';
 import { formatAmount } from '../components/format';
+import { renderStepsText } from '../lib/recipeText';
 import { ConfirmButton, Icon, Spinner } from '../components/ui';
 import type { TFunction } from 'i18next';
 
@@ -15,13 +16,14 @@ function asText(r: SavedRecipe, t: TFunction): string {
   const lang = currentLang();
   return [
     r.title,
+    ...(r.description ? [r.description] : []),
     `${t('common.minutes', { n: r.totalMinutes })} / ${t('common.servings', { n: r.servings })}`,
     '',
     `[${t('detail.ingredients')}]`,
     ...r.ingredients.map((i) => `- ${getIngredientName(i.id, lang)} ${formatAmount(i, t)}`),
     '',
     `[${t('detail.steps')}]`,
-    ...r.steps.map((s, i) => `${i + 1}. ${s}`),
+    ...renderStepsText(r, lang, (ri) => formatAmount(ri, t, lang)).map((s, i) => `${i + 1}. ${s}`),
     ...(r.tip ? ['', `${t('detail.tip')}: ${r.tip}`] : []),
   ].join('\n');
 }
